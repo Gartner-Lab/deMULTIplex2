@@ -8,7 +8,6 @@ require(Matrix)
 
 
 
-
 # The new demultiplex function with "Correct" Pearson residual and cosine similarity
 
 multi_align <- function(bc_mtx, inter.num = 1, initial.pos = .2, cosine.cut = seq(0.5,0.9, 0.1), plot.umap = "cumi.cos", plot.diagnostics = TRUE, plot.path = "./", umap.neighbors = 30L, seed = 1) {
