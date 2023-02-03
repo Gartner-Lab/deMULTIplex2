@@ -1,0 +1,23 @@
+Package: deMULTIplex2
+Type: Package
+Title: deMULTIplex2 for demultiplexing multiplexed single cell data
+Version: 0.0.1
+Author: Qin Zhu, Danny Conrad, Zev Gartner
+Maintainer: Qin Zhu <qin.zhu@ucsf.edu>, Danny Conrad <Danny.Conrad@ucsf.edu>
+Description: deMULTIplex2 for demultiplexing multiplexed single cell data
+Depends:
+    R (>= 3.1.0),
+    devtools,
+    ggplot2
+Imports:
+    irlba,
+    RColorBrewer,
+    reshape2,
+    gridExtra,
+    pheatmap,
+    data.table
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+biocViews: Software, Sequencing, RNASeq
+RoxygenNote: 7.1.2
