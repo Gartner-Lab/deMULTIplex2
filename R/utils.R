@@ -187,3 +187,10 @@ compute_umap <- function(pca_proj, use_dim = 50,
 
 
 
+#' @export
+floor_dec <- function(x, level=1) round(x - 5*10^(-level-1), level)
+
+#' @export
+ceiling_dec <- function(x, level=1) round(x + 5*10^(-level-1), level)
+
+
