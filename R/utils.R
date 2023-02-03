@@ -160,7 +160,8 @@ get_brewer_set <- function(palette = c("sequential", "diverging", "qualitative")
     return(return_palette)
 }
 
-compute_umap <- function(pca_proj, use_dim = 50,
+#' @export
+compute_umap <- function(input_data, use_dim = 50,
                          n_component=2,
                          metric = "cosine",
                          min_dist = 0.1,
@@ -169,7 +170,7 @@ compute_umap <- function(pca_proj, use_dim = 50,
                          nn_method = "annoy",
                          cores=1,
                          verbose=T, ...) {
-    umap_proj <- uwot::umap(as.matrix(pca_proj[, 1:use_dim]),
+    umap_proj <- uwot::umap(as.matrix(input_data[, 1:use_dim]),
                             n_components = n_component,
                             metric = metric,
                             min_dist = min_dist,
@@ -180,7 +181,7 @@ compute_umap <- function(pca_proj, use_dim = 50,
                             nn_method = nn_method,
                             ...)
     colnames(umap_proj) <- paste0("UMAP_", 1:n_component)
-    rownames(umap_proj) <- rownames(pca_proj)
+    rownames(umap_proj) <- rownames(input_data)
     return(umap_proj)
 }
 
