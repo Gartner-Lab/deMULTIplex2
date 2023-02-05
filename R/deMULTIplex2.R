@@ -651,7 +651,7 @@ classifyMULTI <- function(barTable,
                           UMAPNeighbors = 30L,
                           seed = 1) {
     set.seed(seed)
-
+    # TODO: Need to handle cells if rowSums = 0
     bc_mtx <- barTable
 
     if (any(rowSums(bc_mtx)) == 0) {
@@ -682,23 +682,16 @@ classifyMULTI <- function(barTable,
 
     for(bc in barcodes) {
         cat("Fitting GLM-NB for ", bc, sep = "", fill = T)
-        df <- data.frame(Count = bc_mtx[, bc],
+        df <- data.frame(RawUMI = bc_mtx[, bc],
                          CosSim = cos_mtx_raw[,bc])
         df$nUMI <- rowSums(bc_mtx)
         # subset "negative" cells, i.e. below cosine similarity threshold
-        neg_cells <- which(df$CosSim < max(df$CosSim) * (1-posThresh))
-
-        model <- glm.nb(Count ~ log(nUMI), data = df[neg_cells,], link = log)
+        neg_cells <- which(df$CosSim < max(df$CosSim, na.rm = T) * (1-posThresh))
+        model <- glm.nb(RawUMI ~ log(nUMI), data = df[neg_cells,], link = log)
         model_list[[bc]] <- model
 
         predicted_res <- predict(model, df, type = "response", se.fit=TRUE)
         df_pred <- cbind(df, predicted_res)
-        df_pred <- within(df_pred, {
-            pred_mb_count <- fit
-            LL <- fit - 1.96 * se.fit
-            UL <- fit + 1.96 * se.fit
-        })
-
         # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
         df_pred$pearson_residual <- (df_pred$Count-df_pred$fit)/sqrt(df_pred$fit + df_pred$fit^2/model$theta)
 
@@ -769,7 +762,7 @@ classifyMULTI <- function(barTable,
                 CosSim_PearsonRes = cos_mtx_pr[,bc])
             df$nUMI_Raw <- rowSums(bc_mtx)
             df$nUMI_Corrected <- rowSums(cumi_mtx)
-
+            df <- cbind(df, df_pred[,c("fit", "se.fit", "UL", "LL")])
             mappings <- list(
                 c("log(nUMI_Raw)", "log(RawUMI)", "CosSim_RawUMI"),
                 c("log(nUMI_Raw)", "PearsonRes", "CosSim_RawUMI"),
@@ -819,6 +812,7 @@ classifyMULTI <- function(barTable,
             umap = umap_res %>% as.matrix(),
             pr_mtx = pr_mtx %>% as.matrix(),
             cumi_mtx = cumi_mtx %>% as.matrix(),
+            cos_mtx_raw = cos_mtx_raw %>% as.matrix(),
             cos_mtx_pr = cos_mtx_pr %>% as.matrix(),
             models = model_list
         )
