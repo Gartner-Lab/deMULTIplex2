@@ -21,7 +21,8 @@ classifyMULTI <- function(barTable,
                           plotDiagnostics = T,
                           plotPath = getwd(),
                           UMAPNeighbors = 30L,
-                          seed = 1) {
+                          seed = 1,
+                          gini.cut = 0.4) {
     set.seed(seed)
     # TODO: Need to handle cells if rowSums = 0
     ## evaluate choices
@@ -173,6 +174,11 @@ classifyMULTI <- function(barTable,
         dev.off()
     }
 
+    # Compute gini as a potential way to call doublets
+    cos_for_gini = cos_mtx_pr
+    cos_for_gini[cos_for_gini < 0.5] = 0
+    gini_res<- apply(cos_for_gini, 1, reldist::gini )
+
     return(
         list(
             res = assign_tbl %>% as.matrix(),
@@ -181,6 +187,7 @@ classifyMULTI <- function(barTable,
             cumi_mtx = cumi_mtx %>% as.matrix(),
             cos_mtx_raw = cos_mtx_raw %>% as.matrix(),
             cos_mtx_pr = cos_mtx_pr %>% as.matrix(),
+            gini_res = gini_res,
             models = model_list
         )
     )
