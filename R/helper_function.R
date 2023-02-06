@@ -1,5 +1,6 @@
 
-
+#' @export
+'%ni%' <- Negate('%in%')
 
 ### Some helper functions ###
 #' @export
