@@ -1,9 +1,6 @@
 
 
 
-
-
-
 #####################
 ## classifyMULTI() ##
 #####################
@@ -17,6 +14,7 @@
 #' @importFrom magrittr %>%
 #' @export
 classifyMULTI <- function(barTable,
+                          model = c("nb", "poisson"),
                           posThresh = 0.2,
                           cosineThresh = seq(0.5,0.9,0.1),
                           plotUMAP = "cumi.cos",
@@ -26,6 +24,8 @@ classifyMULTI <- function(barTable,
                           seed = 1) {
     set.seed(seed)
     # TODO: Need to handle cells if rowSums = 0
+    ## evaluate choices
+    model <- match.arg(model)
     bc_mtx <- barTable
 
     if (any(rowSums(bc_mtx)) == 0) {
@@ -61,23 +61,16 @@ classifyMULTI <- function(barTable,
         df$nUMI <- rowSums(bc_mtx)
         # subset "negative" cells, i.e. below cosine similarity threshold
         neg_cells <- which(df$CosSim < max(df$CosSim, na.rm = T) * (1-posThresh))
-        model <- glm.nb(RawUMI ~ log(nUMI), data = df[neg_cells,], link = log)
-        model_list[[bc]] <- model
+        #assign("df", df, env=.GlobalEnv)
+        #assign("neg_cells", neg_cells, env=.GlobalEnv)
+        if(model == "nb") {
+            fit.res <- glm.nb.fit(df, use_cells = neg_cells, x = "log(nUMI)", y = "RawUMI")
+        } else if(model == "poisson") {
+            fit.res <- glm.poisson.fit(df, use_cells = neg_cells, x = "log(nUMI)", y = "RawUMI")
+        }
 
-        predicted_res <- predict(model, df, type = "response", se.fit=TRUE)
-        df_pred <- cbind(df, predicted_res)
-        # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
-        df_pred$pearson_residual <- (df_pred$Count-df_pred$fit)/sqrt(df_pred$fit + df_pred$fit^2/model$theta)
-
-        # Optional: return corrected UMI counts (not necessary for demultiplexing)
-        med_scale_df <- data.frame(nUMI = median(df_pred$nUMI))
-        expected_mu <- predict(model, med_scale_df, type = "response", se.fit=TRUE)
-        mu <- expected_mu$fit
-        theta <- model$theta
-        variance <- mu + mu^2 / theta
-        df_pred$corrected_count <- mu + df_pred$pearson_residual * sqrt(variance)
-        df_pred$corrected_umi <- round(df_pred$corrected_count, 0)
-        df_pred$corrected_umi[df_pred$corrected_umi < 0] <- 0
+        model_list[[bc]] <- fit.res$model
+        df_pred <- fit.res$df.pred
 
         cumi_mtx[,bc] <- df_pred$corrected_umi
         pr_mtx[,bc] <- df_pred$pearson_residual
@@ -136,7 +129,7 @@ classifyMULTI <- function(barTable,
                 CosSim_PearsonRes = cos_mtx_pr[,bc])
             df$nUMI_Raw <- rowSums(bc_mtx)
             df$nUMI_Corrected <- rowSums(cumi_mtx)
-            df <- cbind(df, df_pred[,c("fit", "se.fit", "UL", "LL")])
+            df <- cbind(df, df_pred[,c("fit", "se.fit")])
             mappings <- list(
                 c("log(nUMI_Raw)", "log(RawUMI)", "CosSim_RawUMI"),
                 c("log(nUMI_Raw)", "PearsonRes", "CosSim_RawUMI"),
@@ -192,6 +185,60 @@ classifyMULTI <- function(barTable,
         )
     )
 }
+
+
+
+glm.nb.fit <- function(df, use_cells, x, y) {
+    model <- glm.nb(as.formula(paste0(y,"~",x)), data = df[use_cells,], link = log)
+
+    predicted_res <- predict(model, df, type = "response", se.fit=TRUE)
+    df_pred <- cbind(df, predicted_res)
+    # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
+    df_pred$pearson_residual <- (df_pred[[y]]-df_pred$fit)/sqrt(df_pred$fit + df_pred$fit^2/model$theta)
+
+    # Optional: return corrected UMI counts (not necessary for demultiplexing)
+    med_scale_df <- data.frame(nUMI = median(df_pred$nUMI))
+    expected_mu <- predict(model, med_scale_df, type = "response", se.fit=TRUE)
+    mu <- expected_mu$fit
+    theta <- model$theta
+    variance <- mu + mu^2 / theta
+    df_pred$corrected_count <- mu + df_pred$pearson_residual * sqrt(variance)
+    df_pred$corrected_umi <- round(df_pred$corrected_count, 0)
+    df_pred$corrected_umi[df_pred$corrected_umi < 0] <- 0
+    return(
+        list(
+            model = model,
+            df.pred = df_pred
+        )
+    )
+}
+
+
+
+glm.poisson.fit <- function(df, use_cells, x, y) {
+    model <- glm(as.formula(paste0(y,"~",x)), fam = poisson(link = log), data = df[use_cells,])
+    predicted_res <- predict(model, df, type = "response", se.fit=TRUE)
+    df_pred <- cbind(df, predicted_res)
+    # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
+    df_pred$pearson_residual <- (df_pred[[y]]-df_pred$fit)/sqrt(df_pred$fit)
+
+    # Optional: return corrected UMI counts (not necessary for demultiplexing)
+    med_scale_df <- data.frame(nUMI = median(df_pred$nUMI))
+    expected_mu <- predict(model, med_scale_df, type = "response", se.fit=TRUE)
+    mu <- expected_mu$fit
+    variance <- mu
+    df_pred$corrected_count <- mu + df_pred$pearson_residual * sqrt(variance)
+    df_pred$corrected_umi <- round(df_pred$corrected_count, 0)
+    df_pred$corrected_umi[df_pred$corrected_umi < 0] <- 0
+    return(
+        list(
+            model = model,
+            df.pred = df_pred
+        )
+    )
+}
+
+
 
 
 
