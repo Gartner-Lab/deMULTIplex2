@@ -49,7 +49,7 @@ classifyMULTI <- function(bar.table,
 
     # NB fit
     barcodes <- colnames(bc_mtx)
-    model_list <- list()
+    coef_list <- list()
 
     for(bc in barcodes) {
         cat("Fitting GLM-NB for ", bc, sep = "", fill = T)
@@ -74,7 +74,7 @@ classifyMULTI <- function(bar.table,
             fit.res <- glm.poisson.analytical(df, neg_cells = neg_cells, x = "offset(log(nUMI))", y = "bc.umi")
         }
 
-        model_list[[bc]] <- fit.res$model
+        coef_list[[bc]] <- fit.res$model$coefficients
         df_pred <- fit.res$df.pred
 
         cumi_mtx[,bc] <- df_pred$corrected_umi
@@ -199,7 +199,7 @@ classifyMULTI <- function(bar.table,
             cos_mtx_raw = cos_mtx_raw %>% as.matrix(),
             cos_mtx_pr = cos_mtx_pr %>% as.matrix(),
             gini_res = gini_res,
-            models = model_list
+            coefs = coef_list
         )
     )
 }
