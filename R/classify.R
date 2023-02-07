@@ -13,30 +13,26 @@
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom magrittr %>%
 #' @export
-classifyMULTI <- function(barTable,
-                          model = c("nb", "poisson"),
-                          posThresh = 0.2,
-                          cosineThresh = seq(0.5,0.9,0.1),
-                          plotUMAP = "cumi.cos",
-                          plotDiagnostics = T,
-                          plotPath = getwd(),
-                          UMAPNeighbors = 30L,
+classifyMULTI <- function(bar.table,
+                          model = c("nb", "poisson", "poisson.fixed.b1", "poisson.analytical"),
+                          pos.thresh = 0.2,
+                          cos.thresh = seq(0.5,0.9,0.1),
+                          plot.umap = "cumi.cos",
+                          plot.diagnostics = T,
+                          plot.path = getwd(),
+                          umap.nn = 30L,
                           seed = 1,
                           gini.cut = 0.4) {
     set.seed(seed)
     # TODO: Need to handle cells if rowSums = 0
     ## evaluate choices
     model <- match.arg(model)
-    bc_mtx <- barTable
+    bc_mtx <- bar.table
 
     if (any(rowSums(bc_mtx)) == 0) {
         stop("Please remove any cells with 0 total barcode counts")
     }
 
-    # Generate canonical vector matrix for calculating cosine similarities
-    mtx_canon <- diag(x = 1, nrow = ncol(bc_mtx), ncol = ncol(bc_mtx))
-    colnames(mtx_canon) <- colnames(bc_mtx)
-    rownames(mtx_canon) <- colnames(bc_mtx)
 
     # Calculate cosine similarity matrix
     bc_mtx <- Matrix(as.matrix(bc_mtx), sparse = T)
@@ -57,17 +53,25 @@ classifyMULTI <- function(barTable,
 
     for(bc in barcodes) {
         cat("Fitting GLM-NB for ", bc, sep = "", fill = T)
-        df <- data.frame(RawUMI = bc_mtx[, bc],
+        df <- data.frame(bc.umi = bc_mtx[, bc],
                          CosSim = cos_mtx_raw[,bc])
         df$nUMI <- rowSums(bc_mtx)
         # subset "negative" cells, i.e. below cosine similarity threshold
-        neg_cells <- which(df$CosSim < max(df$CosSim, na.rm = T) * (1-posThresh))
-        #assign("df", df, env=.GlobalEnv)
-        #assign("neg_cells", neg_cells, env=.GlobalEnv)
+        neg_cells <- which(df$CosSim < max(df$CosSim, na.rm = T) * (1-pos.thresh))
+        if(bc == barcodes[1]) { # For debugging
+            assign("df", df, env=.GlobalEnv)
+            assign("neg_cells", neg_cells, env=.GlobalEnv)
+        }
+
         if(model == "nb") {
-            fit.res <- glm.nb.fit(df, use_cells = neg_cells, x = "log(nUMI)", y = "RawUMI")
+            fit.res <- glm.nb.fit(df, neg_cells = neg_cells, x = "log(nUMI)", y = "bc.umi")
         } else if(model == "poisson") {
-            fit.res <- glm.poisson.fit(df, use_cells = neg_cells, x = "log(nUMI)", y = "RawUMI")
+            fit.res <- glm.poisson.fit(df, neg_cells = neg_cells, x = "log(nUMI)", y = "bc.umi")
+        } else if(model == "poisson.fixed.b1") {
+            fit.res <- glm.poisson.fit(df, neg_cells = neg_cells, x = "offset(log(nUMI))", y = "bc.umi")
+        }
+        else if(model == "poisson.analytical") { # Same as Poisson fixed! Remove later
+            fit.res <- glm.poisson.analytical(df, neg_cells = neg_cells, x = "offset(log(nUMI))", y = "bc.umi")
         }
 
         model_list[[bc]] <- fit.res$model
@@ -85,11 +89,11 @@ classifyMULTI <- function(barTable,
 
 
     # Assign singlets
-    assign_tbl <- matrix(nrow = nrow(bc_mtx), ncol = length(cosineThresh), data = NA)
-    colnames(assign_tbl) <- paste0("assign.res_", cosineThresh)
+    assign_tbl <- matrix(nrow = nrow(bc_mtx), ncol = length(cos.thresh), data = NA)
+    colnames(assign_tbl) <- paste0("assign.res_", cos.thresh)
     rownames(assign_tbl) <- rownames(bc_mtx)
-    for(i in 1:length(cosineThresh)) {
-        assign_mtx <- cos_mtx_pr > cosineThresh[i]
+    for(i in 1:length(cos.thresh)) {
+        assign_mtx <- cos_mtx_pr > cos.thresh[i]
         assign_res <- apply(assign_mtx, 1, function(x) {
             if (length(which(x)) == 1) {
                 barcodes[which(x)]
@@ -102,48 +106,55 @@ classifyMULTI <- function(barTable,
 
     # UMAP Plotting Options
     umap_res <-  NA
-    if (plotUMAP == "UMI") { # Raw UMI Counts
-        umap_res <- compute_umap(bc_mtx, use_dim = ncol(bc_mtx), n_component=2, n_neighbors = UMAPNeighbors)
-    } else if (plotUMAP == "PR") { # Pearson Residuals
-        umap_res <- compute_umap(pr_mtx, use_dim = ncol(pr_mtx), n_component=2, n_neighbors = UMAPNeighbors)
-    } else if (plotUMAP == "PR_Cos") { # Cosine Similarity calculated from Pearson Residuals
-        umap_res <- compute_umap(cos_mtx_pr, use_dim = ncol(cos_mtx_pr), n_component=2, n_neighbors = UMAPNeighbors)
-    } else if (plotUMAP == "cUMI") { # Corrected UMI Counts
-        umap_res <- compute_umap(cumi_mtx, use_dim = ncol(cumi_mtx), n_component=2, n_neighbors = UMAPNeighbors)
-    } else if (plotUMAP == "cUMI_Cos") { # Cosine Similarity calculated from Corrected UMI Counts
-        dot_res <- cumi_mtx %*% mtx_canon
+    if (plot.umap == "UMI") { # Raw UMI Counts
+        umap_res <- compute_umap(bc_mtx, use_dim = ncol(bc_mtx), n_component=2, n_neighbors = umap.nn)
+    } else if (plot.umap == "pr") { # Pearson Residuals
+        umap_res <- compute_umap(pr_mtx, use_dim = ncol(pr_mtx), n_component=2, n_neighbors = umap.nn)
+    } else if (plot.umap == "pr.cos") { # Cosine Similarity calculated from Pearson Residuals
+        umap_res <- compute_umap(cos_mtx_pr, use_dim = ncol(cos_mtx_pr), n_component=2, n_neighbors = umap.nn)
+    } else if (plot.umap == "cumi") { # Corrected UMI Counts
+        umap_res <- compute_umap(cumi_mtx, use_dim = ncol(cumi_mtx), n_component=2, n_neighbors = umap.nn)
+    } else if (plot.umap == "cumi.cos") { # Cosine Similarity calculated from Corrected UMI Counts
         vec_norm2 <- apply(cumi_mtx, 1, function(x) norm(x, type = "2"))
-        cos_mtx_cumi <- dot_res / vec_norm2
-        umap_res <- compute_umap(cos_mtx_cumi,use_dim = ncol(cos_mtx_cumi), n_component=2, n_neighbors = UMAPNeighbors)
-    } else if (plotUMAP == "None") {
-    } else { stop("plotUMAP = ", plotUMAP, " is not valid") }
+        cos_mtx_cumi <- cumi_mtx  / vec_norm2
+        umap_res <- compute_umap(cos_mtx_cumi,use_dim = ncol(cos_mtx_cumi), n_component=2, n_neighbors = umap.nn)
+    } else if (plot.umap == "none") {
+    } else { stop("plot.umap = ", plot.umap, " is not valid") }
 
     # Diagnostic Plots
-    if (plotDiagnostics) {
+    if (plot.diagnostics) {
         glist <- list()
         for (bc in barcodes) {
             df <- data.frame(
-                RawUMI = bc_mtx[, bc],
-                CorUMI = cumi_mtx[, bc], # For now always set to TRUE so is computed
-                PearsonRes = pr_mtx[,bc],
-                CosSim_RawUMI = cos_mtx_raw[,bc],
-                CosSim_PearsonRes = cos_mtx_pr[,bc])
-            df$nUMI_Raw <- rowSums(bc_mtx)
-            df$nUMI_Corrected <- rowSums(cumi_mtx)
-            df <- cbind(df, df_pred[,c("fit", "se.fit")])
+                bc.umi = bc_mtx[, bc],
+                cr.umi = cumi_mtx[, bc], # For now always set to TRUE so is computed
+                pr = pr_mtx[,bc],
+                cos.umi = cos_mtx_raw[,bc],
+                cos.pr = cos_mtx_pr[,bc])
+            df$tt.umi <- rowSums(bc_mtx)
+            df$tt.cr.umi <- rowSums(cumi_mtx)
+            df <- cbind(df, df_pred[,c("fit"), drop=FALSE])
+            # if(bc == barcodes[1]) {
+            #     assign("df",df, env = .GlobalEnv)
+            # }
+
             mappings <- list(
-                c("log(nUMI_Raw)", "log(RawUMI)", "CosSim_RawUMI"),
-                c("log(nUMI_Raw)", "PearsonRes", "CosSim_RawUMI"),
-                c("log(RawUMI)", "CosSim_RawUMI", "CosSim_RawUMI"),
-                c("nUMI_Corrected", "CorUMI", "CosSim_PearsonRes"),
-                c("log(nUMI_Corrected)", "PearsonRes", "CosSim_PearsonRes"),
-                c("log(CorUMI)", "CosSim_PearsonRes", "CosSim_PearsonRes"),
-                c("log(PearsonRes)", "CosSim_PearsonRes", "CosSim_PearsonRes")
+                c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
+                c("log(bc.umi)", "cos.umi", "cos.umi"),
+                c("log(tt.umi)", "pr", "cos.umi"),
+                c("tt.cr.umi", "cr.umi", "cos.pr"),
+                c("log(pr)", "cos.pr", "cos.pr"),
+                c("log(tt.cr.umi)", "pr", "cos.pr"),
+                c("tt.umi", "bc.umi", "cos.umi"),
+                #c("fit", "bc.umi", "cos.pr"),
+                #c("fit", "pr", "cos.pr"),
+                #c("log(fit)", "log(tt.umi)", "cos.pr"),
+                c("log(tt.cr.umi)", "log(cr.umi)", "cos.pr")
             )
 
-            if (plotUMAP != "None") {
+            if (plot.umap != "none") {
                 df <- cbind(df, umap_res)
-                mappings <- append(mappings, list(c("UMAP_1", "UMAP_2", "CosSim_PearsonRes")))
+                mappings <- append(mappings, list(c("UMAP_1", "UMAP_2", "cos.pr")))
             }
 
             plot_list <- list()
@@ -158,15 +169,15 @@ classifyMULTI <- function(barTable,
                 plot_list[[i]] <- p
             }
             # plot_list[[length(mappings) + 1]] <- arrangeGrob(
-            #     grobs = list(ggplot(df, aes(x = CosSim_RawUMI)) + geom_histogram(bins = 50, color = "white") + theme_bw() + theme(plot.margin = unit(c(0,1,0,0), "cm")),
-            #                  ggplot(df, aes(x = CosSim_PearsonRes)) + geom_histogram(bins = 50, color = "white") + theme_bw() + theme(plot.margin = unit(c(0,1,0,0), "cm"))),
+            #     grobs = list(ggplot(df, aes(x = cos.umi)) + geom_histogram(bins = 50, color = "white") + theme_bw() + theme(plot.margin = unit(c(0,1,0,0), "cm")),
+            #                  ggplot(df, aes(x = cos.pr)) + geom_histogram(bins = 50, color = "white") + theme_bw() + theme(plot.margin = unit(c(0,1,0,0), "cm"))),
             #     nrow = 2)
 
             glist[[bc]] <- arrangeGrob(grobs = plot_list, ncol = 3)
         }
 
         time <- (Sys.time() %>% make.names() %>% strsplit(split = "X") %>% unlist())[2]
-        pdf(paste0(plotPath, "/", time, "_diagnostics.pdf"), width = 12, height = 10)
+        pdf(paste0(plot.path, "/", time, "_diagnostics.pdf"), width = 12, height = 10)
         for(i in 1:length(glist)) {
             grid.newpage()
             grid.draw(glist[[i]])
@@ -194,9 +205,9 @@ classifyMULTI <- function(barTable,
 }
 
 
-
-glm.nb.fit <- function(df, use_cells, x, y) {
-    model <- glm.nb(as.formula(paste0(y,"~",x)), data = df[use_cells,], link = log)
+#' @export
+glm.nb.fit <- function(df, neg_cells, x, y) {
+    model <- glm.nb(as.formula(paste0(y,"~",x)), data = df[neg_cells,], link = log)
 
     predicted_res <- predict(model, df, type = "response", se.fit=TRUE)
     df_pred <- cbind(df, predicted_res)
@@ -221,9 +232,9 @@ glm.nb.fit <- function(df, use_cells, x, y) {
 }
 
 
-
-glm.poisson.fit <- function(df, use_cells, x, y) {
-    model <- glm(as.formula(paste0(y,"~",x)), fam = poisson(link = log), data = df[use_cells,])
+#' @export
+glm.poisson.fit <- function(df, neg_cells, x, y) {
+    model <- glm(as.formula(paste0(y,"~",x)), fam = poisson(link = log), data = df[neg_cells,])
     predicted_res <- predict(model, df, type = "response", se.fit=TRUE)
     df_pred <- cbind(df, predicted_res)
     # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
@@ -240,6 +251,38 @@ glm.poisson.fit <- function(df, use_cells, x, y) {
     return(
         list(
             model = model,
+            df.pred = df_pred
+        )
+    )
+}
+
+
+# Same as Poisson fixed! Remove later
+#' @export
+glm.poisson.analytical <- function(df, neg_cells, x, y) {
+    beta1 = 1
+    beta0 = log(sum(df[neg_cells,]$bc.umi) / sum(df[neg_cells,]$nUMI))
+    df_pred <- df
+    df_pred$fit <- exp(beta0 + beta1 * log(df$nUMI))
+
+    # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
+    df_pred$pearson_residual <- (df_pred[[y]]-df_pred$fit)/sqrt(df_pred$fit)
+    # df_pred$response_residual <- df_pred[[y]]-df_pred$fit
+    # df_pred$working_residual <- (df_pred[[y]]-df_pred$fit)/ df_pred$fit
+    # Deviance residual? https://www.datascienceblog.net/post/machine-learning/interpreting_generalized_linear_models/
+
+    # Optional: return corrected UMI counts (not necessary for demultiplexing)
+    med_scale_df <- data.frame(nUMI = median(df_pred$nUMI))
+    mu <- as.numeric(exp(beta0 + beta1 * log(med_scale_df)))
+    variance <- mu
+    df_pred$corrected_count <- mu + df_pred$pearson_residual * sqrt(variance)
+    df_pred$corrected_umi <- round(df_pred$corrected_count, 0)
+    df_pred$corrected_umi[df_pred$corrected_umi < 0] <- 0
+    return(
+        list(
+            model = list(
+                coefficients = c(beta0 = beta0, beta1 = beta1)
+            ),
             df.pred = df_pred
         )
     )
