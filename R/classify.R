@@ -17,7 +17,8 @@ classifyMULTI <- function(bar.table,
                           model = c("nb", "poisson", "poisson.fixed.b1", "poisson.analytical"),
                           pos.thresh = 0.2,
                           cos.thresh = seq(0.5,0.9,0.1),
-                          plot.umap = "cumi.cos",
+                          pr.thresh = seq(2,10,2),
+                          plot.umap = "cos.cumi",
                           plot.diagnostics = T,
                           plot.path = getwd(),
                           umap.nn = 30L,
@@ -37,15 +38,16 @@ classifyMULTI <- function(bar.table,
     # Calculate cosine similarity matrix
     bc_mtx <- Matrix(as.matrix(bc_mtx), sparse = T)
     vec_norm2 <- apply(bc_mtx, 1, function(x) norm(x, type = "2")) # for each cell, calculate its L2 norm (Euclidean distance from origin)
-    cos_mtx_raw <- bc_mtx / vec_norm2 # divide matrix by L2 norms to get cosine distances
+    cos.umi_mtx <- bc_mtx / vec_norm2 # divide matrix by L2 norms to get cosine distances
 
     # Matrix for storing Pearson residual (from NB fit)
     pr_mtx <- matrix(nrow = nrow(bc_mtx), ncol = ncol(bc_mtx), data = NA)
     rownames(pr_mtx) <- rownames(bc_mtx)
     colnames(pr_mtx) <- colnames(bc_mtx)
 
-    # Matrix for storing corrected UMI counts (inverse NB fit, with library size set to median)
-    cumi_mtx <- pr_mtx
+
+    cumi_mtx <- pr_mtx # Matrix for storing corrected UMI counts (inverse NB fit, with library size set to median)
+    prob_mtx <- pr_mtx # Matrix for storing positive probability based on fit
 
     # NB fit
     barcodes <- colnames(bc_mtx)
@@ -54,10 +56,10 @@ classifyMULTI <- function(bar.table,
     for(bc in barcodes) {
         cat("Fitting GLM-NB for ", bc, sep = "", fill = T)
         df <- data.frame(bc.umi = bc_mtx[, bc],
-                         CosSim = cos_mtx_raw[,bc])
+                         cos.umi = cos.umi_mtx[,bc])
         df$nUMI <- rowSums(bc_mtx)
         # subset "negative" cells, i.e. below cosine similarity threshold
-        neg_cells <- which(df$CosSim < max(df$CosSim, na.rm = T) * (1-pos.thresh))
+        neg_cells <- which(df$cos.umi < max(df$cos.umi, na.rm = T) * (1-pos.thresh))
         if(bc == barcodes[1]) { # For debugging
             assign("df", df, env=.GlobalEnv)
             assign("neg_cells", neg_cells, env=.GlobalEnv)
@@ -79,21 +81,22 @@ classifyMULTI <- function(bar.table,
 
         cumi_mtx[,bc] <- df_pred$corrected_umi
         pr_mtx[,bc] <- df_pred$pearson_residual
+        prob_mtx[,bc] <- df_pred$prob_pos
     }
 
 
     # Recompute cosine metric
     pr_mtx <- Matrix(as.matrix(pr_mtx), sparse = T)
     vec_norm2 <- apply(pr_mtx, 1, function(x) norm(x, type = "2"))
-    cos_mtx_pr <- pr_mtx / vec_norm2
+    cos.pr_mtx <- pr_mtx / vec_norm2
 
 
-    # Assign singlets
-    assign_tbl <- matrix(nrow = nrow(bc_mtx), ncol = length(cos.thresh), data = NA)
-    colnames(assign_tbl) <- paste0("assign.res_", cos.thresh)
-    rownames(assign_tbl) <- rownames(bc_mtx)
+    # Assign singlets based on cosine score on Pearson residual
+    assign_cos.pr <- matrix(nrow = nrow(bc_mtx), ncol = length(cos.thresh), data = NA)
+    colnames(assign_cos.pr) <- paste0("assign_cos.pr_", cos.thresh)
+    rownames(assign_cos.pr) <- rownames(bc_mtx)
     for(i in 1:length(cos.thresh)) {
-        assign_mtx <- cos_mtx_pr > cos.thresh[i]
+        assign_mtx <- cos.pr_mtx > cos.thresh[i]
         assign_res <- apply(assign_mtx, 1, function(x) {
             if (length(which(x)) == 1) {
                 barcodes[which(x)]
@@ -101,8 +104,25 @@ classifyMULTI <- function(bar.table,
                 NA
             }
         })
-        assign_tbl[,i] <- assign_res
+        assign_cos.pr[,i] <- assign_res
     }
+
+    # Assign singlets based on Pearson residual
+    assign_pr <- matrix(nrow = nrow(bc_mtx), ncol = length(pr.thresh), data = NA)
+    colnames(assign_pr) <- paste0("assign_pr_", pr.thresh)
+    rownames(assign_pr) <- rownames(bc_mtx)
+    for(i in 1:length(pr.thresh)) {
+        assign_mtx <- pr_mtx > pr.thresh[i]
+        assign_res <- apply(assign_mtx, 1, function(x) {
+            if (length(which(x)) == 1) {
+                barcodes[which(x)]
+            } else {
+                NA
+            }
+        })
+        assign_pr[,i] <- assign_res
+    }
+
 
     # UMAP Plotting Options
     umap_res <-  NA
@@ -110,14 +130,14 @@ classifyMULTI <- function(bar.table,
         umap_res <- compute_umap(bc_mtx, use_dim = ncol(bc_mtx), n_component=2, n_neighbors = umap.nn)
     } else if (plot.umap == "pr") { # Pearson Residuals
         umap_res <- compute_umap(pr_mtx, use_dim = ncol(pr_mtx), n_component=2, n_neighbors = umap.nn)
-    } else if (plot.umap == "pr.cos") { # Cosine Similarity calculated from Pearson Residuals
-        umap_res <- compute_umap(cos_mtx_pr, use_dim = ncol(cos_mtx_pr), n_component=2, n_neighbors = umap.nn)
+    } else if (plot.umap == "cos.pr") { # Cosine Similarity calculated from Pearson Residuals
+        umap_res <- compute_umap(cos.pr_mtx, use_dim = ncol(cos.pr_mtx), n_component=2, n_neighbors = umap.nn)
     } else if (plot.umap == "cumi") { # Corrected UMI Counts
         umap_res <- compute_umap(cumi_mtx, use_dim = ncol(cumi_mtx), n_component=2, n_neighbors = umap.nn)
-    } else if (plot.umap == "cumi.cos") { # Cosine Similarity calculated from Corrected UMI Counts
+    } else if (plot.umap == "cos.cumi") { # Cosine Similarity calculated from Corrected UMI Counts
         vec_norm2 <- apply(cumi_mtx, 1, function(x) norm(x, type = "2"))
-        cos_mtx_cumi <- cumi_mtx  / vec_norm2
-        umap_res <- compute_umap(cos_mtx_cumi,use_dim = ncol(cos_mtx_cumi), n_component=2, n_neighbors = umap.nn)
+        cos.cumi_mtx <- cumi_mtx  / vec_norm2
+        umap_res <- compute_umap(cos.cumi_mtx,use_dim = ncol(cos.cumi_mtx), n_component=2, n_neighbors = umap.nn)
     } else if (plot.umap == "none") {
     } else { stop("plot.umap = ", plot.umap, " is not valid") }
 
@@ -129,8 +149,8 @@ classifyMULTI <- function(bar.table,
                 bc.umi = bc_mtx[, bc],
                 cr.umi = cumi_mtx[, bc], # For now always set to TRUE so is computed
                 pr = pr_mtx[,bc],
-                cos.umi = cos_mtx_raw[,bc],
-                cos.pr = cos_mtx_pr[,bc])
+                cos.umi = cos.umi_mtx[,bc],
+                cos.pr = cos.pr_mtx[,bc])
             df$tt.umi <- rowSums(bc_mtx)
             df$tt.cr.umi <- rowSums(cumi_mtx)
             df <- cbind(df, df_pred[,c("fit"), drop=FALSE])
@@ -186,18 +206,19 @@ classifyMULTI <- function(bar.table,
     }
 
     # Compute gini as a potential way to call doublets
-    cos_for_gini = cos_mtx_pr
+    cos_for_gini = cos.pr_mtx
     cos_for_gini[cos_for_gini < 0.5] = 0
     gini_res<- apply(cos_for_gini, 1, reldist::gini )
 
     return(
         list(
-            res = assign_tbl %>% as.matrix(),
+            res = cbind(assign_pr, assign_cos.pr) %>% as.matrix(),
             umap = umap_res %>% as.matrix(),
             pr_mtx = pr_mtx %>% as.matrix(),
+            prob_mtx = prob_mtx %>% as.matrix(),
             cumi_mtx = cumi_mtx %>% as.matrix(),
-            cos_mtx_raw = cos_mtx_raw %>% as.matrix(),
-            cos_mtx_pr = cos_mtx_pr %>% as.matrix(),
+            cos.umi_mtx = cos.umi_mtx %>% as.matrix(),
+            cos.pr_mtx = cos.pr_mtx %>% as.matrix(),
             gini_res = gini_res,
             coefs = coef_list
         )
@@ -239,6 +260,11 @@ glm.poisson.fit <- function(df, neg_cells, x, y) {
     df_pred <- cbind(df, predicted_res)
     # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
     df_pred$pearson_residual <- (df_pred[[y]]-df_pred$fit)/sqrt(df_pred$fit)
+
+    # Compute truncated probability of being positive for each barcode
+    df_pred$prob_neg = dpois(df_pred$bc.umi, lambda = exp(df_pred$fit))
+    df_pred$prob_neg[df_pred$pr < 0] = 1
+    df_pred$prob_pos = 1- df_pred$prob_neg
 
     # Optional: return corrected UMI counts (not necessary for demultiplexing)
     med_scale_df <- data.frame(nUMI = median(df_pred$nUMI))
