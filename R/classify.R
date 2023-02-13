@@ -15,7 +15,7 @@
 #' @export
 classifyMULTI <- function(bar.table,
                           model = c("nb", "poisson", "poisson.fixed.b1", "poisson.analytical"),
-                          pos.thresh = 0.2,
+                          pos.thresh = 0.5,
                           cos.thresh = seq(0.5,0.9,0.1),
                           pr.thresh = seq(2,10,2),
                           plot.umap = "cos.cumi",
@@ -57,7 +57,7 @@ classifyMULTI <- function(bar.table,
         cat("Fitting GLM-NB for ", bc, sep = "", fill = T)
         df <- data.frame(bc.umi = bc_mtx[, bc],
                          cos.umi = cos.umi_mtx[,bc])
-        df$nUMI <- rowSums(bc_mtx)
+        df$tt.umi <- rowSums(bc_mtx)
         # subset "negative" cells, i.e. below cosine similarity threshold
         neg_cells <- which(df$cos.umi < max(df$cos.umi, na.rm = T) * (1-pos.thresh))
         if(bc == barcodes[1]) { # For debugging
@@ -66,14 +66,14 @@ classifyMULTI <- function(bar.table,
         }
 
         if(model == "nb") {
-            fit.res <- glm.nb.fit(df, neg_cells = neg_cells, x = "log(nUMI)", y = "bc.umi")
+            fit.res <- glm.nb.fit(df, neg_cells = neg_cells, x = "log(tt.umi)", y = "bc.umi")
         } else if(model == "poisson") {
-            fit.res <- glm.poisson.fit(df, neg_cells = neg_cells, x = "log(nUMI)", y = "bc.umi")
+            fit.res <- glm.poisson.fit(df, neg_cells = neg_cells, x = "log(tt.umi)", y = "bc.umi")
         } else if(model == "poisson.fixed.b1") {
-            fit.res <- glm.poisson.fit(df, neg_cells = neg_cells, x = "offset(log(nUMI))", y = "bc.umi")
+            fit.res <- glm.poisson.fit(df, neg_cells = neg_cells, x = "offset(log(tt.umi))", y = "bc.umi")
         }
         else if(model == "poisson.analytical") { # Same as Poisson fixed! Remove later
-            fit.res <- glm.poisson.analytical(df, neg_cells = neg_cells, x = "offset(log(nUMI))", y = "bc.umi")
+            fit.res <- glm.poisson.analytical(df, neg_cells = neg_cells, x = "offset(log(tt.umi))", y = "bc.umi")
         }
 
         coef_list[[bc]] <- fit.res$model$coefficients
@@ -236,7 +236,7 @@ glm.nb.fit <- function(df, neg_cells, x, y) {
     df_pred$pearson_residual <- (df_pred[[y]]-df_pred$fit)/sqrt(df_pred$fit + df_pred$fit^2/model$theta)
 
     # Optional: return corrected UMI counts (not necessary for demultiplexing)
-    med_scale_df <- data.frame(nUMI = median(df_pred$nUMI))
+    med_scale_df <- data.frame(tt.umi = median(df_pred$tt.umi))
     expected_mu <- predict(model, med_scale_df, type = "response", se.fit=TRUE)
     mu <- expected_mu$fit
     theta <- model$theta
@@ -260,14 +260,14 @@ glm.poisson.fit <- function(df, neg_cells, x, y) {
     df_pred <- cbind(df, predicted_res)
     # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
     df_pred$pearson_residual <- (df_pred[[y]]-df_pred$fit)/sqrt(df_pred$fit)
-
+    df_pred$rqr <- rqr.poisson(df_pred, y=y,fit="fit")
     # Compute truncated probability of being positive for each barcode
     df_pred$prob_neg = dpois(df_pred$bc.umi, lambda = exp(df_pred$fit))
     df_pred$prob_neg[df_pred$pr < 0] = 1
     df_pred$prob_pos = 1- df_pred$prob_neg
 
     # Optional: return corrected UMI counts (not necessary for demultiplexing)
-    med_scale_df <- data.frame(nUMI = median(df_pred$nUMI))
+    med_scale_df <- data.frame(tt.umi = median(df_pred$tt.umi))
     expected_mu <- predict(model, med_scale_df, type = "response", se.fit=TRUE)
     mu <- expected_mu$fit
     variance <- mu
@@ -287,9 +287,9 @@ glm.poisson.fit <- function(df, neg_cells, x, y) {
 #' @export
 glm.poisson.analytical <- function(df, neg_cells, x, y) {
     beta1 = 1
-    beta0 = log(sum(df[neg_cells,]$bc.umi) / sum(df[neg_cells,]$nUMI))
+    beta0 = log(sum(df[neg_cells,]$bc.umi) / sum(df[neg_cells,]$tt.umi))
     df_pred <- df
-    df_pred$fit <- exp(beta0 + beta1 * log(df$nUMI))
+    df_pred$fit <- exp(beta0 + beta1 * log(df$tt.umi))
 
     # Compute Pearson residual using background count: (Count - fit) / sqrt(fit  + fit^2/theta)
     df_pred$pearson_residual <- (df_pred[[y]]-df_pred$fit)/sqrt(df_pred$fit)
@@ -298,7 +298,7 @@ glm.poisson.analytical <- function(df, neg_cells, x, y) {
     # Deviance residual? https://www.datascienceblog.net/post/machine-learning/interpreting_generalized_linear_models/
 
     # Optional: return corrected UMI counts (not necessary for demultiplexing)
-    med_scale_df <- data.frame(nUMI = median(df_pred$nUMI))
+    med_scale_df <- data.frame(tt.umi = median(df_pred$tt.umi))
     mu <- as.numeric(exp(beta0 + beta1 * log(med_scale_df)))
     variance <- mu
     df_pred$corrected_count <- mu + df_pred$pearson_residual * sqrt(variance)
@@ -314,7 +314,16 @@ glm.poisson.analytical <- function(df, neg_cells, x, y) {
     )
 }
 
-
+# Compute rqr for poisson regression
+#' @export
+rqr.poisson <- function(df, y, fit = "fit") {
+    y = df[[y]]
+    mu = df[[fit]]
+    a <- ppois(y - 1, mu)
+    b <- ppois(y, mu)
+    u <- runif(n = length(y), min = a, max = b)
+    rqr_pred <- qnorm(u)
+}
 
 
 
