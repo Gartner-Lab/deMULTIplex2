@@ -28,11 +28,6 @@ get_factor_color <-function (labels, pal = "Set1", maxCol = 9, nogrey = T)
     return(colv)
 }
 
-#' @export
-numeric_bin_color_opt <- function() {
-    allowed_pals <- c('gg_color_hue', 'rainbow', 'RdYlBu', 'RdBu', 'viridis', 'magma', 'plasma', 'inferno')
-    return(allowed_pals)
-}
 
 #' @export
 gg_color_hue2 <- function(n) {
@@ -46,67 +41,50 @@ floor_dec <- function(x, level=1) round(x - 5*10^(-level-1), level)
 #' @export
 ceiling_dec <- function(x, level=1) round(x + 5*10^(-level-1), level)
 
-#' @export
-get_numeric_bin_color <-function (bins, palette = "RdYlBu", maxCol = 9)
-{
-    allowed_pals <- numeric_bin_color_opt()
-    if(!palette %in% allowed_pals) stop(paste0("Please specify one of '", paste(allowed_pals, collapse = "', '"), "'."))
 
-    unq <- unique(bins)
-    if(palette %in% get_brewer_set(c("sequential", "diverging"))) {
-        colorRampPalette(rev(RColorBrewer::brewer.pal(maxCol, palette)))(length(unq))
-    } else if(palette %in% list("viridis" = "viridis", "magma" = "magma", "plasma" = "plasma", "inferno" = "inferno")) {
-        viridis(n = length(unq), option = palette)
-    } else if(palette == "rainbow") {
-        colorRampPalette(rev(rainbow(10)))(length(unq))
-    } else if(palette == "gg_color_hue") {
-        gg_color_hue2(length(unq))
-    }
-}
 
 #' @export
 numeric_color_opt <- function() {
-    allowed_pals <- c("BlueGreenRed", 'RdYlBu', 'RdBu','RdOgYl', 'rainbow2', 'viridis', 'magma', 'plasma', 'inferno', 'rainbow', 'gg_color_hue', 'grey&red')
+    allowed_pals <- c("BlueGreenRed", 'RdYlBu', 'RdBu','RdOgYl', 'viridis', 'magma', 'plasma', 'inferno', 'rainbow', 'gg_color_hue', 'grey&red')
     return(allowed_pals)
 }
 
 #' @export
-get_numeric_color <- function(palette = NULL) {
+get_numeric_color <- function(palette = NULL, cnum = 100) {
     if(is.null(palette)) stop("please specify a palette")
     allowed_pals <- numeric_color_opt()
+
     if(!palette %in% allowed_pals) stop(paste0("Please specify one of '", paste(allowed_pals, collapse = "', '"), "'."))
     if(palette %in% get_brewer_set(c("sequential", "diverging"))) {
-        colorRampPalette(rev(RColorBrewer::brewer.pal(9,palette)))(100)
+        colorRampPalette(rev(RColorBrewer::brewer.pal(9,palette)))(cnum)
     } else if(palette %in% list("viridis" = "viridis", "magma" = "magma", "plasma" = "plasma", "inferno" = "inferno")) {
-        viridis(n = 100, option = palette)
+        viridis(n = cnum, option = palette)
     } else if(palette == "diverge_hcl") {
-        colorRampPalette(colorspace::diverge_hcl(7))(100)
+        colorRampPalette(colorspace::diverge_hcl(7))(cnum)
     } else if(palette == "redgreen") {
         rev(gplots::redgreen(75))
     } else if(palette == "rainbow") {
-        colorRampPalette(rev(rainbow(10)))(100)
-    } else if(palette == "rainbow2") {
-        c("#CCCCCCCC",rainbow(500)[50:500])
+        colorRampPalette(rev(rainbow(10)))(cnum)
     } else if(palette == "grey&red") {
-        c("grey", "#b2182b")
+        colorRampPalette(c("grey", "#b2182b"))(cnum)
     } else if(palette == "RdOgYl") {
-        c("grey85", "red", "orange", "yellow")
+        colorRampPalette(c("grey85", "red", "orange", "yellow"))(cnum)
     } else if(palette == "gg_color_hue") {
-        gg_color_hue2(10)
+        gg_color_hue2(cnum)
     } else if(palette == "blue_green_gold"){
-        c("grey85", "blue", "green", "#FFD200", "gold")
+        colorRampPalette(c("grey85", "blue", "green", "#FFD200", "gold"))(cnum)
     } else if(palette == "black_red_gold"){
-        c("grey85", "black", "red", "#FFD200")
+        colorRampPalette(c("grey85", "black", "red", "#FFD200"))(cnum)
     } else if(palette == "black_red") {
-        c("grey85", "black", "red")
+        colorRampPalette(c("grey85", "black", "red"))(cnum)
     } else if(palette == "red_yellow") {
-        c("grey85",  "red", "yellow")
+        colorRampPalette(c("grey85",  "red", "yellow"))(cnum)
     } else if(palette == "black_yellow") {
-        c("grey85",  "black", "yellow")
+        colorRampPalette(c("grey85",  "black", "yellow"))(cnum)
     } else if(palette == "black_yellow_gold") {
-        c("grey85",  "black", "yellow", "gold")
+        colorRampPalette(c("grey85",  "black", "yellow", "gold"))(cnum)
     } else if(palette == "BlueGreenRed") {
-        colorRampPalette(c("midnightblue", "dodgerblue", "seagreen", "#00C000", "gold2", "darkorange1", "red1"))(10)
+        colorRampPalette(c("midnightblue", "dodgerblue", "seagreen", "#00C000", "gold2", "darkorange1", "red1"))(cnum)
     }
 }
 

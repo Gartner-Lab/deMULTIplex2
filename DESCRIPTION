@@ -21,7 +21,9 @@ Depends:
     ggpubr,
     ggrastr,
     magrittr,
-    ggExtra
+    dplyr,
+    ggExtra,
+    viridis
 Imports:
 License: GPL-3
 Encoding: UTF-8
