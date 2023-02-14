@@ -13,11 +13,12 @@ classify.cells <- function(bc_mtx,
                           neg.thresh = 0.2,
                           residual.type = c("rqr", 'pearson'),
                           prob.cut = 1e-5,
-                          plot.umap = c("umi", "residual"),
+                          plot.umap = c("residual", "umi"),
                           plot.diagnostics = F,
                           plot.path = getwd(),
                           umap.nn = 30L,
-                          seed = 1) {
+                          seed = 1,
+                          min.bc.show = 50) {
     set.seed(seed)
     # TODO: Need to handle cells if rowSums = 0
     ## evaluate choices
@@ -27,7 +28,7 @@ classify.cells <- function(bc_mtx,
 
     zero_bc_cells = rowSums(bc_mtx) == 0
     if (sum(zero_bc_cells) > 0) {
-        message("Detected cells with 0 barcode count. These cells will not be classified.")
+        message(paste0("Detected ", sum(zero_bc_cells), " cells with 0 barcode count. These cells will not be classified."))
         bc_mtx = bc_mtx[!zero_bc_cells,]
     }
 
@@ -124,7 +125,7 @@ classify.cells <- function(bc_mtx,
     if (plot.umap == "umi") { # Raw UMI Counts
         umap_res <- compute_umap(bc_mtx, use_dim = ncol(bc_mtx), n_component=2, n_neighbors = umap.nn)
     } else if (plot.umap == "residual") { # Pearson Residuals
-        umap_res <- compute_umap(pr_mtx, use_dim = ncol(res_mtx), n_component=2, n_neighbors = umap.nn)
+        umap_res <- compute_umap(res_mtx, use_dim = ncol(res_mtx), n_component=2, n_neighbors = umap.nn)
     } else {
         umap_res <-  NA
     }
@@ -146,13 +147,15 @@ classify.cells <- function(bc_mtx,
         #assign("umap_df", umap_df, env=.GlobalEnv)
 
         g1 <- ggplot(umap_df, aes_string("UMAP_1", "UMAP_2")) +
-            geom_point_rast(data = umap_df[is.na(umap_df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = .8) +
-            geom_point_rast(data = umap_df[!is.na(umap_df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = .8) +
+            geom_point_rast(aes_string(color = "barcode_assign"), stroke = 0, size = .5) +
+            #geom_point_rast(data = umap_df[!is.na(umap_df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = .5) +
             scale_color_manual(values = use_color, na.value='lightgrey') +
             theme_bw() +
             ggtitle("barcode_assign") +
             guides(color = "none")
+        show_bc = names(which(table(res$assign_table$barcode_assign) > min.bc.show))
         label_data <- umap_df %>% group_by_at("barcode_assign") %>% summarize_at(c("UMAP_1", "UMAP_2"), median)
+        label_data <- label_data[label_data[["barcode_assign"]] %in% show_bc,,drop=F]
         g1 <- g1 + geom_text(
             aes_string(
                 x="UMAP_1",y="UMAP_2",
