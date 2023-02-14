@@ -18,6 +18,8 @@ classify.cells <- function(bc_mtx,
                           plot.path = getwd(),
                           umap.nn = 30L,
                           seed = 1,
+                          point.size = 1,
+                          label.size = 3,
                           min.bc.show = 50) {
     set.seed(seed)
     # TODO: Need to handle cells if rowSums = 0
@@ -147,13 +149,13 @@ classify.cells <- function(bc_mtx,
         #assign("umap_df", umap_df, env=.GlobalEnv)
 
         g1 <- ggplot(umap_df, aes_string("UMAP_1", "UMAP_2")) +
-            geom_point_rast(aes_string(color = "barcode_assign"), stroke = 0, size = .5) +
+            geom_point_rast(aes_string(color = "barcode_assign"), stroke = 0, size = point.size) +
             #geom_point_rast(data = umap_df[!is.na(umap_df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = .5) +
             scale_color_manual(values = use_color, na.value='lightgrey') +
             theme_bw() +
             ggtitle("barcode_assign") +
             guides(color = "none")
-        show_bc = names(which(table(res$assign_table$barcode_assign) > min.bc.show))
+        show_bc = names(which(table(umap_df[["barcode_assign"]]) > min.bc.show))
         label_data <- umap_df %>% group_by_at("barcode_assign") %>% summarize_at(c("UMAP_1", "UMAP_2"), median)
         label_data <- label_data[label_data[["barcode_assign"]] %in% show_bc,,drop=F]
         g1 <- g1 + geom_text(
@@ -162,12 +164,12 @@ classify.cells <- function(bc_mtx,
                 label = "barcode_assign"
             ),
             color = "black",
-            size = 2,
+            size = label.size,
             data = label_data
         )
 
         g2 <- ggplot(umap_df, aes_string("UMAP_1", "UMAP_2")) +
-            geom_point_rast(aes_string(color = "barcode_count"), stroke = 0, size = 1) +
+            geom_point_rast(aes_string(color = "barcode_count"), stroke = 0, size = point.size) +
             scale_color_manual(values = get_gradient_color("BlueGreenRed", cnum = length(levels(umap_df$barcode_count))), na.value='lightgrey') +
             theme_bw() +
             ggtitle("barcode_count")
@@ -190,12 +192,12 @@ classify.cells <- function(bc_mtx,
             # }
 
             mappings <- list(
-                #c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
-                #c("log(bc.umi)", "cos.umi", "cos.umi"),
-                c("log(tt.umi)", "res", "cos.umi")
-                #c("qq"),
-                #c("UMAP_1", "UMAP_2", "res"),
-                #c("UMAP_1", "UMAP_2", "cos.res")
+                c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
+                c("log(bc.umi)", "cos.umi", "cos.umi"),
+                c("log(tt.umi)", "res", "cos.umi"),
+                c("qq"),
+                c("UMAP_1", "UMAP_2", "res"),
+                c("UMAP_1", "UMAP_2", "cos.res")
             )
 
             plot_list <- list()
@@ -203,7 +205,7 @@ classify.cells <- function(bc_mtx,
                 map <- mappings[[i]]
                 if(map == c("qq")) {
                     # QQ plot
-                    p = ggplot(df, aes(sample=res))+stat_qq(size = 1, stroke = 0) +
+                    p = ggplot(df, aes(sample=res))+stat_qq(size = point.size, stroke = 0) +
                         stat_qq_line() +
                         geom_vline(xintercept = res_cuts[bc]) +
                         geom_vline(xintercept = res_fits[[bc]]$estimate[1], color = "red") +
@@ -212,7 +214,7 @@ classify.cells <- function(bc_mtx,
                         theme_bw()
                 } else {
                     p <- ggplot(df, aes_string(map[1], map[2])) +
-                        geom_point_rast(aes_string(color = map[3]), stroke = 0, size = 1) +
+                        geom_point_rast(aes_string(color = map[3]), stroke = 0, size = point.size) +
                         scale_color_gradientn(colors = get_gradient_color("BlueGreenRed")) +
                         ggtitle(bc) +
                         theme_bw() +
