@@ -12,9 +12,9 @@ classify.cells <- function(bc_mtx,
                           model = c("nb", "poisson", "poisson.analytical"),
                           neg.thresh = 0.2,
                           residual.type = c("rqr", 'pearson'),
-                          residual.thresh = 1e-4, # Re-design for compatibility
+                          prob.cut = 1e-5,
                           plot.umap = c("umi", "residual"),
-                          plot.diagnostics = T,
+                          plot.diagnostics = F,
                           plot.path = getwd(),
                           umap.nn = 30L,
                           seed = 1) {
@@ -25,8 +25,10 @@ classify.cells <- function(bc_mtx,
     plot.umap <- match.arg(plot.umap)
     residual.type <- match.arg(residual.type)
 
-    if (any(rowSums(bc_mtx)) == 0) {
-        stop("Please remove any cells with 0 total barcode counts")
+    zero_bc_cells = rowSums(bc_mtx) == 0
+    if (sum(zero_bc_cells) > 0) {
+        message("Detected cells with 0 barcode count. These cells will not be classified.")
+        bc_mtx = bc_mtx[!zero_bc_cells,]
     }
 
 
@@ -46,13 +48,16 @@ classify.cells <- function(bc_mtx,
     coef_list <- list()
     res_cuts <- list()
     res_fits <- list()
-
     for(bc in barcodes) {
         df <- data.frame(bc.umi = bc_mtx[, bc],
                          cos.umi = cos.umi_mtx[,bc])
         df$tt.umi <- rowSums(bc_mtx)
         # subset "negative" cells, i.e. below cosine similarity threshold
         neg_cells <- which(df$cos.umi < max(df$cos.umi, na.rm = T) * neg.thresh)
+        if(!length(neg_cells)) {
+            stop("Fail to initialize the method. Please check input matrix.")
+        }
+
         # if(bc == barcodes[1]) { # For debugging
         #     assign("df", df, env=.GlobalEnv)
         #     assign("neg_cells", neg_cells, env=.GlobalEnv)
@@ -77,9 +82,11 @@ classify.cells <- function(bc_mtx,
         x = df_pred$rqr[neg_cells]
         x = x[is.finite(x) & !is.na(x)]
         res_fit <- fitdistr(x, "normal")
-        res_cut <- qnorm(residual.thresh, res_fit$estimate[1], res_fit$estimate[2], lower.tail = F)
+
+        res_cut <- qnorm(prob.cut, res_fit$estimate[1], res_fit$estimate[2], lower.tail = F)
         max_cut = abs(max(df_pred$rqr[is.finite(df_pred$rqr)], na.rm=T))
         res_cut <- min(abs(res_cut), max_cut)
+
         res_fits[[bc]] = res_fit
         res_cuts[[bc]] <- res_cut
     }
@@ -125,6 +132,7 @@ classify.cells <- function(bc_mtx,
     glist <- list()
 
     if(1) { # Always plot
+        message("Plotting final umap...")
         umap_df <- cbind(umap_res, assign_table)
         umap_df$barcode_count = as.character(umap_df$barcode_count)
         umap_df$barcode_count[umap_df$barcode_count >= 3] = ">=3"
@@ -134,15 +142,18 @@ classify.cells <- function(bc_mtx,
         unq_bcs = unq_bcs[!is.na(unq_bcs)]
         use_color = get_factor_color(unq_bcs, "Set1")
         names(use_color) = unq_bcs
+
+        #assign("umap_df", umap_df, env=.GlobalEnv)
+
         g1 <- ggplot(umap_df, aes_string("UMAP_1", "UMAP_2")) +
-            geom_point_rast(data = umap_df[is.na(umap_df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = 1) +
-            geom_point_rast(data = umap_df[!is.na(umap_df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = 1) +
+            geom_point_rast(data = umap_df[is.na(umap_df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = .8) +
+            geom_point_rast(data = umap_df[!is.na(umap_df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = .8) +
             scale_color_manual(values = use_color, na.value='lightgrey') +
             theme_bw() +
             ggtitle("barcode_assign") +
             guides(color = "none")
         label_data <- umap_df %>% group_by_at("barcode_assign") %>% summarize_at(c("UMAP_1", "UMAP_2"), median)
-        g1 <- g1 + geom_label(
+        g1 <- g1 + geom_text(
             aes_string(
                 x="UMAP_1",y="UMAP_2",
                 label = "barcode_assign"
@@ -154,12 +165,11 @@ classify.cells <- function(bc_mtx,
 
         g2 <- ggplot(umap_df, aes_string("UMAP_1", "UMAP_2")) +
             geom_point_rast(aes_string(color = "barcode_count"), stroke = 0, size = 1) +
-            scale_color_manual(values = get_numeric_color("BlueGreenRed", cnum = length(levels(umap_df$barcode_count))), na.value='lightgrey') +
+            scale_color_manual(values = get_gradient_color("BlueGreenRed", cnum = length(levels(umap_df$barcode_count))), na.value='lightgrey') +
             theme_bw() +
             ggtitle("barcode_count")
         glist[["summary"]] <- arrangeGrob(g1,g2, ncol = 2)
     }
-
 
     # Diagnostic Plots
     if (plot.diagnostics) {
@@ -177,31 +187,41 @@ classify.cells <- function(bc_mtx,
             # }
 
             mappings <- list(
-                c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
-                c("log(bc.umi)", "cos.umi", "cos.umi"),
-                c("log(tt.umi)", "res", "cos.umi"),
-                c("log(res)", "cos.res", "cos.res"),
-                c("UMAP_1", "UMAP_2", "res"),
-                c("UMAP_1", "UMAP_2", "cos.res")
+                #c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
+                #c("log(bc.umi)", "cos.umi", "cos.umi"),
+                c("log(tt.umi)", "res", "cos.umi")
+                #c("qq"),
+                #c("UMAP_1", "UMAP_2", "res"),
+                #c("UMAP_1", "UMAP_2", "cos.res")
             )
 
             plot_list <- list()
             for(i in 1:length(mappings)){
                 map <- mappings[[i]]
-                p <- ggplot(df, aes_string(map[1], map[2])) +
-                    geom_point_rast(aes_string(color = map[3]), stroke = 0, size = 1) +
-                    scale_color_gradientn(colors = get_numeric_color("BlueGreenRed")) +
-                    ggtitle(bc) +
-                    theme_bw() +
-                    labs(color = gsub("_","\n",map[3]))
+                if(map == c("qq")) {
+                    # QQ plot
+                    p = ggplot(df, aes(sample=res))+stat_qq(size = 1, stroke = 0) +
+                        stat_qq_line() +
+                        geom_vline(xintercept = res_cuts[bc]) +
+                        geom_vline(xintercept = res_fits[[bc]]$estimate[1], color = "red") +
+                        xlab("Normal quantiles") +
+                        ylab("Residual quantiles") +
+                        theme_bw()
+                } else {
+                    p <- ggplot(df, aes_string(map[1], map[2])) +
+                        geom_point_rast(aes_string(color = map[3]), stroke = 0, size = 1) +
+                        scale_color_gradientn(colors = get_gradient_color("BlueGreenRed")) +
+                        ggtitle(bc) +
+                        theme_bw() +
+                        labs(color = gsub("_","\n",map[3]))
 
-                if(map[2] == "res") {
-                    p = p +
-                        geom_hline(yintercept = c(res_cuts[bc])) +
-                        geom_hline(yintercept = res_fits[[bc]]$estimate[1], color = "red")
+                    if(map[2] == "res") {
+                        p = p +
+                            geom_hline(yintercept = c(res_cuts[bc])) +
+                            geom_hline(yintercept = res_fits[[bc]]$estimate[1], color = "red")
+                    }
+                    p = ggMarginal(p, type = "histogram")
                 }
-                p = ggMarginal(p, type = "histogram")
-
                 plot_list[[i]] <- p
             }
 
@@ -210,9 +230,10 @@ classify.cells <- function(bc_mtx,
     }
 
     time <- (Sys.time() %>% make.names() %>% strsplit(split = "X") %>% unlist())[2]
-    pdf(paste0(plot.path, "/", time, "_assignment.pdf"), width = 15, height = 10)
+    pdf(paste0(plot.path, "/", time, "_assignment.pdf"), width = 18, height = 10)
     for(i in 1:length(glist)) {
         grid.newpage()
+        message(paste0("Plotting ", names(glist)[i]))
         grid.draw(glist[[i]])
     }
     dev.off()

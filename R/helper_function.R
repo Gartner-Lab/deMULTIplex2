@@ -50,7 +50,7 @@ numeric_color_opt <- function() {
 }
 
 #' @export
-get_numeric_color <- function(palette = NULL, cnum = 100) {
+get_gradient_color <- function(palette = NULL, cnum = 100) {
     if(is.null(palette)) stop("please specify a palette")
     allowed_pals <- numeric_color_opt()
 
