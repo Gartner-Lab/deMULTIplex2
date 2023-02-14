@@ -10,7 +10,7 @@
 #' @export
 classify.cells <- function(bc_mtx,
                           model = c("nb", "poisson", "poisson.analytical"),
-                          neg.thresh = 0.5,
+                          neg.thresh = 0.2,
                           residual.type = c("rqr", 'pearson'),
                           residual.thresh = 1e-4, # Re-design for compatibility
                           plot.umap = c("umi", "residual"),
@@ -48,22 +48,24 @@ classify.cells <- function(bc_mtx,
     res_fits <- list()
 
     for(bc in barcodes) {
-        cat("Fitting GLM-NB for ", bc, sep = "", fill = T)
         df <- data.frame(bc.umi = bc_mtx[, bc],
                          cos.umi = cos.umi_mtx[,bc])
         df$tt.umi <- rowSums(bc_mtx)
         # subset "negative" cells, i.e. below cosine similarity threshold
         neg_cells <- which(df$cos.umi < max(df$cos.umi, na.rm = T) * neg.thresh)
-        if(bc == barcodes[1]) { # For debugging
-            assign("df", df, env=.GlobalEnv)
-            assign("neg_cells", neg_cells, env=.GlobalEnv)
-        }
+        # if(bc == barcodes[1]) { # For debugging
+        #     assign("df", df, env=.GlobalEnv)
+        #     assign("neg_cells", neg_cells, env=.GlobalEnv)
+        # }
 
         if(model == "nb") {
+            cat("Fitting GLM-NB for ", bc, sep = "", fill = T)
             fit.res <- glm.nb.fit(df, neg_cells = neg_cells, x = "log(tt.umi)", y = "bc.umi")
         } else if(model == "poisson") {
+            cat("Fitting GLM-poisson for ", bc, sep = "", fill = T)
             fit.res <- glm.poisson.fit(df, neg_cells = neg_cells, x = "log(tt.umi)", y = "bc.umi")
         } else if(model == "poisson.analytical") {
+            cat("Fitting GLM-poisson for ", bc, sep = "", fill = T)
             fit.res <- glm.poisson.fit(df, neg_cells = neg_cells, x = "offset(log(tt.umi))", y = "bc.umi") # Fixing b1 = 1 also fixes b0
         }
 
@@ -120,11 +122,9 @@ classify.cells <- function(bc_mtx,
         umap_res <-  NA
     }
 
-    # Diagnostic Plots
-    if (plot.diagnostics) {
-        glist <- list()
+    glist <- list()
 
-        # Final assignment umap
+    if(1) { # Always plot
         umap_df <- cbind(umap_res, assign_table)
         umap_df$barcode_count = as.character(umap_df$barcode_count)
         umap_df$barcode_count[umap_df$barcode_count >= 3] = ">=3"
@@ -157,8 +157,12 @@ classify.cells <- function(bc_mtx,
             scale_color_manual(values = get_numeric_color("BlueGreenRed", cnum = length(levels(umap_df$barcode_count))), na.value='lightgrey') +
             theme_bw() +
             ggtitle("barcode_count")
-        glist[["overview"]] = arrangeGrob(g1,g2, ncol = 2)
+        glist[["summary"]] <- arrangeGrob(g1,g2, ncol = 2)
+    }
 
+
+    # Diagnostic Plots
+    if (plot.diagnostics) {
         for (bc in barcodes) {
             df <- data.frame(
                 bc.umi = bc_mtx[, bc],
@@ -203,17 +207,15 @@ classify.cells <- function(bc_mtx,
 
             glist[[bc]] <- arrangeGrob(grobs = plot_list, ncol = 3)
         }
-
-
-        time <- (Sys.time() %>% make.names() %>% strsplit(split = "X") %>% unlist())[2]
-        pdf(paste0(plot.path, "/", time, "_diagnostics.pdf"), width = 15, height = 10)
-        for(i in 1:length(glist)) {
-            grid.newpage()
-            grid.draw(glist[[i]])
-        }
-        dev.off()
     }
 
+    time <- (Sys.time() %>% make.names() %>% strsplit(split = "X") %>% unlist())[2]
+    pdf(paste0(plot.path, "/", time, "_assignment.pdf"), width = 15, height = 10)
+    for(i in 1:length(glist)) {
+        grid.newpage()
+        grid.draw(glist[[i]])
+    }
+    dev.off()
 
     return(
         list(
