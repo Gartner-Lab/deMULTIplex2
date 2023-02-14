@@ -10,7 +10,7 @@
 #' @export
 classify.cells <- function(bc_mtx,
                           model = c("nb", "poisson", "poisson.analytical"),
-                          neg.thresh = 0.2,
+                          neg.thresh = 0.5,
                           residual.type = c("rqr", 'pearson'),
                           prob.cut = 1e-5,
                           plot.umap = c("residual", "umi"),
