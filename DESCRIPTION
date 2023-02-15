@@ -23,7 +23,10 @@ Depends:
     magrittr,
     dplyr,
     ggExtra,
-    viridis
+    viridis,
+    ShortRead,
+    stringdist,
+    readxl
 Imports:
 License: GPL-3
 Encoding: UTF-8
