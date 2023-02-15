@@ -8,7 +8,7 @@
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom magrittr %>%
 #' @export
-classify.cells <- function(bc_mtx,
+classifyCells <- function(bc_mtx,
                           model = c("nb", "poisson", "poisson.analytical"),
                           neg.thresh = 0.5,
                           residual.type = c("rqr", 'pearson'),
@@ -16,6 +16,7 @@ classify.cells <- function(bc_mtx,
                           plot.umap = c("residual", "umi"),
                           plot.diagnostics = F,
                           plot.path = getwd(),
+                          plot.name = "",
                           umap.nn = 30L,
                           seed = 1,
                           point.size = 1,
@@ -167,10 +168,11 @@ classify.cells <- function(bc_mtx,
             size = label.size,
             data = label_data
         )
-
+        count_color = get_gradient_color("BlueGreenRed", cnum = length(levels(umap_df$barcode_count)))
+        names(count_color) = levels(umap_df$barcode_count)
         g2 <- ggplot(umap_df, aes_string("UMAP_1", "UMAP_2")) +
             geom_point_rast(aes_string(color = "barcode_count"), stroke = 0, size = point.size) +
-            scale_color_manual(values = get_gradient_color("BlueGreenRed", cnum = length(levels(umap_df$barcode_count))), na.value='lightgrey') +
+            scale_color_manual(values = count_color, na.value='lightgrey') +
             theme_bw() +
             ggtitle("barcode_count")
         glist[["summary"]] <- arrangeGrob(g1,g2, ncol = 2)
@@ -186,10 +188,13 @@ classify.cells <- function(bc_mtx,
                 cos.res = cos.res_mtx[,bc])
             df$tt.umi <- rowSums(bc_mtx)
             df <- cbind(df, df_pred[,c("fit"), drop=FALSE])
-            df <- cbind(df, umap_res)
+            df <- cbind(df, umap_df)
             # if(bc == barcodes[1]) {
             #     assign("df",df, env = .GlobalEnv)
             # }
+            df$positive_cell_bc_counts = as.character(df$barcode_count)
+            df$positive_cell_bc_counts[res_call_mtx[,bc] == 0] = NA
+            df$positive_cell_bc_counts <- factor(df$positive_cell_bc_counts, c("0", "1", "2" ,">=3"))
 
             mappings <- list(
                 c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
@@ -197,7 +202,7 @@ classify.cells <- function(bc_mtx,
                 c("log(tt.umi)", "res", "cos.umi"),
                 c("qq"),
                 c("UMAP_1", "UMAP_2", "res"),
-                c("UMAP_1", "UMAP_2", "cos.res")
+                c("UMAP_1", "UMAP_2", "positive_cell_bc_counts")
             )
 
             plot_list <- list()
@@ -215,7 +220,6 @@ classify.cells <- function(bc_mtx,
                 } else {
                     p <- ggplot(df, aes_string(map[1], map[2])) +
                         geom_point_rast(aes_string(color = map[3]), stroke = 0, size = point.size) +
-                        scale_color_gradientn(colors = get_gradient_color("BlueGreenRed")) +
                         ggtitle(bc) +
                         theme_bw() +
                         labs(color = gsub("_","\n",map[3]))
@@ -225,7 +229,16 @@ classify.cells <- function(bc_mtx,
                             geom_hline(yintercept = c(res_cuts[bc])) +
                             geom_hline(yintercept = res_fits[[bc]]$estimate[1], color = "red")
                     }
-                    p = ggMarginal(p, type = "histogram")
+
+                    if(map[3] == "positive_cell_bc_counts") {
+                        p = p + scale_color_manual(values = count_color, na.value='lightgrey')
+                    } else {
+                        p = p + scale_color_gradientn(colors = get_gradient_color("BlueGreenRed"))
+                    }
+
+                    if(map[1]!= "UMAP_1"){
+                        p = ggMarginal(p, type = "histogram")
+                    }
                 }
                 plot_list[[i]] <- p
             }
@@ -235,7 +248,7 @@ classify.cells <- function(bc_mtx,
     }
 
     time <- (Sys.time() %>% make.names() %>% strsplit(split = "X") %>% unlist())[2]
-    pdf(paste0(plot.path, "/", time, "_assignment.pdf"), width = 18, height = 10)
+    pdf(paste0(plot.path, "/", plot.name, "_", time, "_assignment.pdf"), width = 20, height = 10)
     for(i in 1:length(glist)) {
         grid.newpage()
         message(paste0("Plotting ", names(glist)[i]))
