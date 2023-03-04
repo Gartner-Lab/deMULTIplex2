@@ -9,7 +9,7 @@
 #' @importFrom magrittr %>%
 #' @export
 classifyCells <- function(bc_mtx,
-                          init.cos.cut = 0.9,
+                          init.cos.cut = 0.7,
                           converge.threshold = 1e-3,
                           iter.max = 1e2,
                           prob.cut = 0.5,
@@ -29,7 +29,7 @@ classifyCells <- function(bc_mtx,
     plot.umap <- match.arg(plot.umap)
     residual.type <- match.arg(residual.type)
 
-    if(init.cos.cut < 0.5) {
+    if(any(init.cos.cut) < 0.5) {
         cat("Warning: setting init.cos.cut less than 0.5 is not recommended.", fill=T)
     }
 
@@ -59,7 +59,8 @@ classifyCells <- function(bc_mtx,
         df$tt.umi <- rowSums(bc_mtx)
 
         cat("Running EM for ", bc, sep = "", fill = T)
-        res <- fit.em(df,init.cos.cut = init.cos.cut, converge.threshold = converge.threshold, iter.max = iter.max)
+        if(length(init.cos.cut) > 1) cos.cut = init.cos.cut[which(barcodes == bc)] else cos.cut = init.cos.cut
+        res <- fit.em(df,init.cos.cut = cos.cut, converge.threshold = converge.threshold, iter.max = iter.max)
 
         df <- res$df
         pr_mtx[,bc] <- df$pearson_residual
