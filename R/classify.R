@@ -11,8 +11,9 @@
 classifyCells <- function(bc_mtx,
                           init.cos.cut = 0.7,
                           converge.threshold = 1e-3,
-                          iter.max = 1e2,
+                          max.iter = 1e2,
                           prob.cut = 0.5,
+                          min.cell.fit = 10,
                           residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
                           plot.umap = c("residual", "umi"),
                           plot.diagnostics = F,
@@ -29,7 +30,7 @@ classifyCells <- function(bc_mtx,
     plot.umap <- match.arg(plot.umap)
     residual.type <- match.arg(residual.type)
 
-    if(any(init.cos.cut) < 0.5) {
+    if(any(init.cos.cut < 0.5)) {
         cat("Warning: setting init.cos.cut less than 0.5 is not recommended.", fill=T)
     }
 
@@ -60,7 +61,7 @@ classifyCells <- function(bc_mtx,
 
         cat("Running EM for ", bc, sep = "", fill = T)
         if(length(init.cos.cut) > 1) cos.cut = init.cos.cut[which(barcodes == bc)] else cos.cut = init.cos.cut
-        res <- fit.em(df,init.cos.cut = cos.cut, converge.threshold = converge.threshold, iter.max = iter.max)
+        res <- fit.em(df,init.cos.cut = cos.cut, converge.threshold = converge.threshold, max.iter = max.iter, min.cell.fit = min.cell.fit)
 
         df <- res$df
         pr_mtx[,bc] <- df$pearson_residual
@@ -362,7 +363,7 @@ plot.all.diagnostics <- function(df, mappings, bc, point.size = 1, ncol = 3) {
 
 
 
-fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, iter.max = 1e2) {
+fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 1e2, min.cell.fit = 10) {
     # Initialization
     mem.iter <- as.numeric(df$cos.umi > init.cos.cut)
     pi0 <- sum(mem.iter==0)/length(mem.iter)
@@ -370,11 +371,13 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, iter.max = 
 
     fail.fit.I = 0
 
-    if(sum(mem.iter==1) < 10) {
-        cat("Less than 10 poistive cells detected in initialization. Consider changing the initial cosine cutoff to lower, and check if the well contain stained cells.", fill=T)
+    if(sum(mem.iter==1) < min.cell.fit) {
+        cat(paste0("Less than ", min.cell.fit,
+        " poistive cells detected in initialization. Consider changing the initial cosine cutoff to lower, and check if the well contain stained cells."), fill=T)
         fail.fit.I = 1
-    } else if(sum(mem.iter==0) < 10) {
-        cat("Less than 10 negative cells detected in initialization. Consider changing the initial cosine cutoff to higher.", fill=T)
+    } else if(sum(mem.iter==0) < min.cell.fit) {
+        cat("Less than ", min.cell.fit,
+            " negative cells detected in initialization. Consider changing the initial cosine cutoff to higher.", fill=T)
         fail.fit.I = 1
     } else {
         tryCatch({
@@ -418,7 +421,7 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, iter.max = 
 
         k <- 2
 
-        while (abs(Q[k]-Q[k-1])>=converge.threshold & !fail.fit.I & k <= iter.max) {
+        while (abs(Q[k]-Q[k-1])>=converge.threshold & !fail.fit.I & k <= max.iter) {
             print(abs(Q[k]-Q[k-1]))
             # E step
             comp0 <- pi0 * df$prob0
@@ -434,11 +437,13 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, iter.max = 
 
             mem.iter = as.numeric(p1 > 0.5)
 
-            if(sum(mem.iter==1) < 10) {
-                cat("Less than 10 poistive cells detected in initialization. Consider changing the initial cosine cutoff to lower, and check if the well contain stained cells.", fill=T)
+            if(sum(mem.iter==1) < min.cell.fit) {
+                cat(paste0("Less than ", min.cell.fit,
+                           " poistive cells detected in initialization. Consider changing the initial cosine cutoff to lower, and check if the well contain stained cells."), fill=T)
                 fail.fit.I = 1
-            } else if(sum(mem.iter==0) < 10) {
-                cat("Less than 10 negative cells detected in initialization. Consider changing the initial cosine cutoff to higher.", fill=T)
+            } else if(sum(mem.iter==0) < min.cell.fit) {
+                cat("Less than ", min.cell.fit,
+                    " negative cells detected in initialization. Consider changing the initial cosine cutoff to higher.", fill=T)
                 fail.fit.I = 1
             } else {
                 tryCatch({
