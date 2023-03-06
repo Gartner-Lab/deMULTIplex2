@@ -187,4 +187,16 @@ read_excel_allsheets <- function(filename, tibble = FALSE) {
 }
 
 
-
+#' @export
+leiden_clus <- function (embedding, k = 30) {
+    require(RANN)
+    require(leiden)
+    snn <- RANN::nn2(embedding, k=k)$nn.idx
+    adjacency_matrix <- matrix(0L, nrow(embedding), nrow(embedding))
+    rownames(adjacency_matrix) <- colnames(adjacency_matrix) <- rownames(embedding)
+    for(ii in 1:nrow(embedding)) {
+        adjacency_matrix[ii,rownames(embedding)[snn[ii,]]] <- 1L
+    }
+    partition <- leiden(adjacency_matrix)
+    return(partition)
+}
