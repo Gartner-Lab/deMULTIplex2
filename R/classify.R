@@ -8,11 +8,13 @@
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom magrittr %>%
 #' @export
-classifyCells <- function(bc_mtx,
-                          init.cos.cut = 0.9,
+demutiplexTags <- function(bc_mtx,
+                          init.cos.cut = 0.7,
                           converge.threshold = 1e-3,
-                          iter.max = 1e2,
+                          max.iter = 1e2,
                           prob.cut = 0.5,
+                          min.cell.fit = 10,
+                          max.cell.fit = 1e4,
                           residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
                           plot.umap = c("residual", "umi"),
                           plot.diagnostics = F,
@@ -29,7 +31,7 @@ classifyCells <- function(bc_mtx,
     plot.umap <- match.arg(plot.umap)
     residual.type <- match.arg(residual.type)
 
-    if(init.cos.cut < 0.5) {
+    if(any(init.cos.cut < 0.5)) {
         cat("Warning: setting init.cos.cut less than 0.5 is not recommended.", fill=T)
     }
 
@@ -59,12 +61,13 @@ classifyCells <- function(bc_mtx,
         df$tt.umi <- rowSums(bc_mtx)
 
         cat("Running EM for ", bc, sep = "", fill = T)
-        res <- fit.em(df,init.cos.cut = init.cos.cut, converge.threshold = converge.threshold, iter.max = iter.max)
+        if(length(init.cos.cut) > 1) cos.cut = init.cos.cut[which(barcodes == bc)] else cos.cut = init.cos.cut
+        res <- fit.em(df,init.cos.cut = cos.cut, converge.threshold = converge.threshold, max.iter = max.iter, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit)
 
         df <- res$df
         pr_mtx[,bc] <- df$pearson_residual
         rqr_mtx[,bc] <- df$rqr
-        prob_mtx[,bc] <- df$p1
+        prob_mtx[,bc] <- df$post1
         coef_list[[bc]] <- res$fit0
     }
 
@@ -111,7 +114,7 @@ classifyCells <- function(bc_mtx,
         umap_df$barcode_count[umap_df$barcode_count >= 3] = ">=3"
         umap_df$barcode_count <- factor(umap_df$barcode_count, c("0", "1", "2" ,">=3"))
 
-        glist[["summary"]] <- plot_summary(umap_df, point.size = point.size, label.size = label.size, min.bc.show = min.bc.show)
+        glist[["summary"]] <- plotSummary(umap_df, point.size = point.size, label.size = label.size, min.bc.show = min.bc.show)
     }
 
     # DEBUG
@@ -278,7 +281,7 @@ rqr.nb <- function (df, y, fit = "fit", model)
 }
 
 
-plot_summary <- function(df, point.size = 1, label.size = 3 , min.bc.show = 50) {
+plotSummary <- function(df, point.size = 1, label.size = 3 , min.bc.show = 50) {
     unq_bcs = unique(df$barcode_assign)
     unq_bcs = unq_bcs[!is.na(unq_bcs)]
     use_color = get_factor_color(unq_bcs, "Set1")
@@ -318,19 +321,19 @@ plot.all.diagnostics <- function(df, mappings, bc, point.size = 1, ncol = 3) {
     plot_list <- list()
     for(i in 1:length(mappings)){
         map <- mappings[[i]]
-        if(map == "qq") {
+        if(map[1] == "qq") {
             # QQ plot
             p = ggplot(df, aes(sample=res))+stat_qq(size = point.size, stroke = 0) +
                 stat_qq_line() +
                 xlab("Normal quantiles") +
                 ylab("Residual quantiles") +
                 theme_bw()
-        } else if(map == "qq_init") {
+        } else if(map[1] == "qq_init") {
             p = ggplot(dd1, aes(x = theoretical, y = sample)) + geom_point(alpha = 0.3) +
                 geom_abline(intercept = 0, slope = 1, color = "blue") +
                 theme_classic() +
                 ggtitle("QQ plot of standardized residuals")
-        } else if (map == "qq_final") {
+        } else if (map[1] == "qq_final") {
             p = ggplot(dd2, aes(x = theoretical, y = sample)) + geom_point(alpha = 0.3) +
                 geom_abline(intercept = 0, slope = 1, color = "blue") +
                 theme_classic() +
@@ -359,132 +362,69 @@ plot.all.diagnostics <- function(df, mappings, bc, point.size = 1, ncol = 3) {
     return(arrangeGrob(grobs = plot_list, ncol = ncol))
 }
 
+sum.finite <- function(x) {
+    sum(x[is.finite(x)])
+}
 
+fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 1e2, min.cell.fit = 10, max.cell.fit = 1e4, plot = FALSE) {
 
-fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, iter.max = 1e2) {
     # Initialization
-    mem.iter <- as.numeric(df$cos.umi > init.cos.cut)
-    pi0 <- sum(mem.iter==0)/length(mem.iter)
-    pi1 <- sum(mem.iter==1)/length(mem.iter)
-
-    fail.fit.I = 0
-
-    if(sum(mem.iter==1) < 10) {
-        cat("Less than 10 poistive cells detected in initialization. Consider changing the initial cosine cutoff to lower, and check if the well contain stained cells.", fill=T)
-        fail.fit.I = 1
-    } else if(sum(mem.iter==0) < 10) {
-        cat("Less than 10 negative cells detected in initialization. Consider changing the initial cosine cutoff to higher.", fill=T)
-        fail.fit.I = 1
-    } else {
-        tryCatch({
-            # Fit 0 part with glm.NB
-            fit0 = glm.nb("bc.umi~log(tt.umi)", df[mem.iter ==0, ], link = log)
-            fit1 = glm.nb("(tt.umi - bc.umi)~log(tt.umi)", df[mem.iter ==1, ], link = log)
-        }, error = function(e) {
-            cat("Fitting failed.", fill=T)
-            fail.fit.I <<- 1
-        })
-    }
+    mem.init = as.numeric(df$cos.umi > init.cos.cut)
+    m.res <- m.step(df, posterior.prob = NULL, mem.init = mem.init, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit)
 
     glist <- list()
 
-    if(!fail.fit.I) {
-        pred0 <- predict(fit0, df, type = "response", se.fit=FALSE)
-        prob0 <- dnbinom(df$bc.umi, mu=pred0, size=fit0$theta)
-        pred1 <- predict(fit1, df, type = "response", se.fit=FALSE)
-        prob1 <- dnbinom(df$tt.umi - df$bc.umi, mu=pred1, size=fit1$theta)
-
-        prob0[df$bc.umi < pred0] = 1
-
-        comp0 <- pi0 * prob0
-        comp1 <- pi1 * prob1
-        comp.sum <- comp0 + comp1
-
-        df$pred0 <- pred0
-        df$prob0 <- prob0
-        df$pred1 <- pred1
-        df$prob1 <- prob1
-        df$p0 <- comp0/comp.sum
-        df$p1 <- comp1/comp.sum
-
-        glist[[1]] <- plot.em.diagnostics(df)
-        sum.finite <- function(x) {
-            sum(x[is.finite(x)])
-        }
+    if(!m.res$fail.fit.I) {
+        e.res <- e.step(df, m.res$fit0, m.res$fit1, m.res$pi.vector, plot = plot)
+        glist[[1]] <- e.res$plot
 
         Q <- 0
-        Q[2] <- sum.finite(log(pi0)+log(df$prob0)) + sum.finite(log(pi1)+log(df$prob1))
-
         k <- 2
+        Q[k] <- e.res$loglik
 
-        while (abs(Q[k]-Q[k-1])>=converge.threshold & !fail.fit.I & k <= iter.max) {
-            print(abs(Q[k]-Q[k-1]))
-            # E step
-            comp0 <- pi0 * df$prob0
-            comp1 <- pi1 * df$prob1
-            comp.sum <- comp0 + comp1
+        message(paste0("Iteration ", k-1,"; Q diff: ",abs(Q[k]-Q[k-1])))
 
-            p0 <- comp0/comp.sum
-            p1 <- comp1/comp.sum
-
+        while (abs(Q[k]-Q[k-1])>=converge.threshold & !m.res$fail.fit.I & k <= max.iter) {
             # M step
-            pi0 <- sum.finite(p0) / nrow(df)
-            pi1 <- sum.finite(p1) / nrow(df)
+            m.res <- m.step(df, posterior.prob = e.res$posterior.prob, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit)
+            if(m.res$fail.fit.I) break
 
-            mem.iter = as.numeric(p1 > 0.5)
-
-            if(sum(mem.iter==1) < 10) {
-                cat("Less than 10 poistive cells detected in initialization. Consider changing the initial cosine cutoff to lower, and check if the well contain stained cells.", fill=T)
-                fail.fit.I = 1
-            } else if(sum(mem.iter==0) < 10) {
-                cat("Less than 10 negative cells detected in initialization. Consider changing the initial cosine cutoff to higher.", fill=T)
-                fail.fit.I = 1
-            } else {
-                tryCatch({
-                    fit0 = glm.nb("bc.umi~log(tt.umi)", df[mem.iter ==0, ], link = log)
-                    fit1 = glm.nb("(tt.umi - bc.umi)~log(tt.umi)", df[mem.iter ==1, ], link = log)
-                }, error = function(e) {
-                    cat("Fitting failed.", fill=T)
-                    fail.fit.I <<- 1
-                })
-            }
-
-            if(fail.fit.I) break
-            pred0 <- predict(fit0, df, type = "response", se.fit=FALSE)
-            prob0 <- dnbinom(df$bc.umi, mu=pred0, size=fit0$theta)
-            pred1 <- predict(fit1, df, type = "response", se.fit=FALSE)
-            prob1 <- dnbinom(df$tt.umi - df$bc.umi, mu=pred1, size=fit1$theta)
-
-            prob0[df$bc.umi < pred0] = 1
-
+            # E step
+            e.res <- e.step(df, m.res$fit0, m.res$fit1, m.res$pi.vector, plot = plot)
+            glist[[k-1]] <- e.res$plot
             k <- k + 1
-            Q[k] <- sum.finite(log(pi0)+log(prob0)) + sum.finite(log(pi1)+log(prob1))
+            Q[k] <- e.res$loglik
+            message(paste0("Iteration ", k-1,"; Q diff: ",abs(Q[k]-Q[k-1])))
+        }
 
-            # Plotting
-            df$prob0 <- prob0
-            df$pred0 <- pred0
-            df$p0 <- p0
-            df$prob1 <- prob1
-            df$pred1 <- pred1
-            df$p1 <- p1
-            glist[[k-1]] <-plot.em.diagnostics(df)
+        if(k > max.iter && abs(Q[k]-Q[k-1]) >= converge.threshold) {
+            cat("Warning: max number of iteration reached but algorithm did not converge to specified range. This is normally ok but please check the diagnostic plots. Consider increasing max.iter or max.cell.fit if fit is not good.", fill=T)
         }
     }
 
-    if(fail.fit.I){
+    if(m.res$fail.fit.I){
         # Refine later
-        df$prob0 <- 1
-        df$pred0 <- NA
-        df$p0 <- 1
-        df$prob1 <- 0
-        df$pred1 <- NA
-        df$p1 <- 0
         fit0 <- list(coefficients = NA, theta = NA)
         fit1 <- list(coefficients = NA, theta = NA)
+        df$prob0 <- 1
+        df$pred0 <- NA
+        df$post0 <- 1
+        df$prob1 <- 0
+        df$pred1 <- NA
+        df$post1 <- 0
+    } else {
+        fit0 <- m.res$fit0
+        fit1 <- m.res$fit1
+        df$pred0 <- predict(fit0, df, type = "response", se.fit=FALSE)
+        df$prob0 <- dnbinom(df$bc.umi, mu=df$pred0, size=fit0$theta)
+        df$pred1 <- predict(fit1, df, type = "response", se.fit=FALSE)
+        df$prob1 <- dnbinom(df$tt.umi - df$bc.umi, mu=df$pred1, size=fit1$theta)
+        df$prob0[df$bc.umi < df$pred0] = 1
+        df$post0 <- e.res$posterior.prob[,1]
+        df$post1 <- e.res$posterior.prob[,2]
     }
 
     # Compute some resduals
-    #assign("df", df, env = .GlobalEnv)
     df$pearson_residual <- (df[['bc.umi']]-df$pred0)/sqrt(df$pred0 + df$pred0^2/fit0$theta)
     df$rqr <- rqr.nb(df, y="bc.umi",fit="pred0", model = fit0)
 
@@ -508,18 +448,114 @@ plot.em.diagnostics <- function(df) {
         geom_point_rast(aes_string("log(tt.umi)", "log(pred1)"), color = "grey", size = 1, stroke = 0) +
         scale_color_gradientn(colors =get_gradient_color("BlueGreenRed"))
 
-    g3 <- ggplot(df, aes_string(color = "p0")) +
+    g3 <- ggplot(df, aes_string(color = "post0")) +
         geom_point_rast(aes_string("log(tt.umi)", "log(bc.umi)"), size = 1, stroke = 0) +
         geom_point_rast(aes_string("log(tt.umi)", "log(pred0)"), color = "grey", size = 1, stroke = 0) +
         scale_color_gradientn(colors =get_gradient_color("BlueGreenRed"))
 
-    g4 <- ggplot(df, aes_string(color = "p1")) +
+    g4 <- ggplot(df, aes_string(color = "post1")) +
         geom_point_rast(aes_string("log(tt.umi)", "log(tt.umi-bc.umi)"), size = 1, stroke = 0) +
         geom_point_rast(aes_string("log(tt.umi)", "log(pred1)"), color = "grey", size = 1, stroke = 0) +
         scale_color_gradientn(colors =get_gradient_color("BlueGreenRed"))
 
     return(arrangeGrob(grobs = list(g1,g2,g3,g4), ncol = 2))
 }
+
+
+
+e.step <- function(df, fit0, fit1, pi.vector, plot = FALSE) {
+    pred0 <- predict(fit0, df, type = "response", se.fit=FALSE)
+    prob0 <- dnbinom(df$bc.umi, mu=pred0, size=fit0$theta)
+    pred1 <- predict(fit1, df, type = "response", se.fit=FALSE)
+    prob1 <- dnbinom(df$tt.umi - df$bc.umi, mu=pred1, size=fit1$theta)
+    prob0[df$bc.umi < pred0] = 1
+
+    pi0 = pi.vector[1]
+    pi1 = pi.vector[2]
+    prob0 = prob0
+    prob1 = prob1
+
+    comp0 <- pi0 * prob0
+    comp1 <- pi1 * prob1
+    comp.sum <- comp0 + comp1
+
+    post0 <- comp0/comp.sum
+    post1 <- comp1/comp.sum
+
+    comp.sum.ln <- log(comp.sum, base = exp(1))
+    comp.sum.ln.sum <- sum(comp.sum.ln)
+
+
+    # Plotting
+    df$pred0 <- pred0
+    df$prob0 <- prob0
+    df$pred1 <- pred1
+    df$prob1 <- prob1
+    df$post0 <- post0
+    df$post1 <- post1
+    if(plot) {
+        g1 <- plot.em.diagnostics(df)
+    } else {
+        g1 <- NULL
+    }
+
+    list("loglik" = comp.sum.ln.sum,
+         "posterior.prob" = cbind(post0, post1),
+         "plot" = g1)
+}
+
+
+m.step <- function(df, posterior.prob, mem.init = NULL, min.cell.fit = 10, max.cell.fit = 1e4) {
+    if(!is.null(mem.init)) {
+        mem.iter = mem.init
+        pi0 <- sum.finite(mem.iter == 0) / length(mem.iter)
+        pi1 <- sum.finite(mem.iter == 1) / length(mem.iter)
+    } else {
+        post0 <- posterior.prob[,1]
+        post1 <- posterior.prob[,2]
+        mem.iter = as.numeric(post1 > 0.5)
+        pi0 <- sum.finite(post0) / length(mem.iter)
+        pi1 <- sum.finite(post1) / length(mem.iter)
+    }
+
+    fail.fit.I = 0
+    fit0 <- NULL
+    fit1 <- NULL
+
+    if(sum(mem.iter==1) < min.cell.fit) {
+        cat(paste0("Less than ", min.cell.fit,
+                   " poistive cells detected in initialization. Consider decreasing the init.cos.cut, and check if the well contain stained cells."), fill=T)
+        fail.fit.I = 1
+    } else if(sum(mem.iter==0) < min.cell.fit) {
+        cat("Less than ", min.cell.fit,
+            " negative cells detected in initialization. Consider increasing the init.cos.cut.", fill=T)
+        fail.fit.I = 1
+    } else {
+        if(sum(mem.iter==0) > max.cell.fit) {
+            df_fit0 = df[sample(which(mem.iter ==0), max.cell.fit), ]
+        } else {
+            df_fit0 = df[mem.iter == 0, ]
+        }
+        if(sum(mem.iter==1) > max.cell.fit) {
+            df_fit1 = df[sample(which(mem.iter ==1), max.cell.fit), ]
+        } else {
+            df_fit1 = df[mem.iter ==1, ]
+        }
+        tryCatch({
+            fit0 = glm.nb("bc.umi~log(tt.umi)", df_fit0, link = log)
+            fit1 = glm.nb("(tt.umi - bc.umi)~log(tt.umi)", df_fit1, link = log)
+        }, error = function(e) {
+            cat("Fitting failed.", fill=T)
+            fail.fit.I <<- 1
+        })
+    }
+
+    list("fit0" = fit0,
+         "fit1" = fit1,
+         "pi.vector" = c(pi0,pi1),
+         "fail.fit.I" = fail.fit.I)
+}
+
 
 
 
