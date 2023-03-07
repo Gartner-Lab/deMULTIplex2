@@ -1,6 +1,6 @@
 
 
-
+#' @export
 confusion_stats <- function(call_label, true_label, row.exclude = 'NA', col.exclude = c("doublet", "unknown"), plot.path =getwd(), plot.name = 'benchmark_', width = 3.5, height = 2.5) {
     call_label <- as.character(call_label[names(true_label)])
     call_label[is.na(call_label)] = 'NA'
@@ -24,7 +24,7 @@ confusion_stats <- function(call_label, true_label, row.exclude = 'NA', col.excl
     ))
 }
 
-
+#' @export
 benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot.name = 'benchmark_demultiplex2', width = 3.5, height = 2.5,
                                    seed = 1,
                                    init.cos.cut = .5,
@@ -70,7 +70,7 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot
 }
 
 
-
+#' @export
 benchmark_demultiplex1 <- function(tag_mtx, true_label, plot.path =getwd(), plot.name = 'benchmark_demultiplex1', width = 3.5, height = 2.5) {
     require(deMULTIplex)
 
@@ -124,7 +124,7 @@ benchmark_demultiplex1 <- function(tag_mtx, true_label, plot.path =getwd(), plot
 }
 
 
-
+#' @export
 benchmark_HTODemux <- function(tag_mtx, rna_mtx, true_label, plot.path =getwd(), plot.name = 'benchmark_HTODemux', width = 3.5, height = 2.5) {
     require(Seurat)
     start_time <- Sys.time()
@@ -154,7 +154,7 @@ benchmark_HTODemux <- function(tag_mtx, rna_mtx, true_label, plot.path =getwd(),
 }
 
 
-
+#' @export
 benchmark_demuxmix_full <- function(tag_mtx, rna_mtx, true_label, plot.path = getwd(), plot.name = 'benchmark_demuxmix_full_', width = 3.5, height = 2.5) {
     start_time <- Sys.time()
     dmm <- demuxmix(as.matrix(t(tag_mtx)), rna = colSums(rna_mtx > 0))
@@ -172,7 +172,7 @@ benchmark_demuxmix_full <- function(tag_mtx, rna_mtx, true_label, plot.path = ge
 }
 
 
-
+#' @export
 benchmark_demuxmix_naive <- function(tag_mtx, true_label, plot.path = getwd(), plot.name = 'benchmark_demuxmix_naive', width = 3.5, height = 2.5) {
     start_time <- Sys.time()
     dmmNaive <- demuxmix(as.matrix(t(tag_mtx)), model = "naive")
