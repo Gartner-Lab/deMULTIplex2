@@ -6,11 +6,11 @@ sum.finite <- function(x) {
     sum(x[is.finite(x)])
 }
 
-fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 1e2, min.cell.fit = 10, max.cell.fit = 1e4, plot = FALSE) {
+fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 1e2, min.cell.fit = 10, max.cell.fit = 1e4, min.quantile.fit = .05, max.quantile.fit = .95, plot = FALSE) {
 
     # Initialization
     mem.init = as.numeric(df$cos.umi > init.cos.cut)
-    m.res <- m.step(df, posterior.prob = NULL, mem.init = mem.init, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit)
+    m.res <- m.step(df, posterior.prob = NULL, mem.init = mem.init, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit, min.quantile.fit = min.quantile.fit, max.quantile.fit = max.quantile.fit)
 
     glist <- list()
 
@@ -27,7 +27,7 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
 
         while (abs(Q[k]-Q[k-1])>=converge.threshold & !m.res$fail.fit.I & k <= max.iter) {
             # M step
-            m.res <- m.step(df, posterior.prob = e.res$posterior.prob, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit)
+            m.res <- m.step(df, posterior.prob = e.res$posterior.prob, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit, min.quantile.fit = min.quantile.fit, max.quantile.fit = max.quantile.fit)
             if(m.res$fail.fit.I) break
 
             # E step
@@ -148,41 +148,44 @@ e.step <- function(df, fit0, fit1, pi.vector, plot = FALSE) {
 }
 
 
-m.step <- function(df, posterior.prob, mem.init = NULL, min.cell.fit = 10, max.cell.fit = 1e4) {
+m.step <- function(df, posterior.prob, mem.init = NULL, min.cell.fit = 10, max.cell.fit = 1e4, min.quantile.fit = .05, max.quantile.fit = .95) {
     if(!is.null(mem.init)) {
-        mem.iter = mem.init
-        pi0 <- sum.finite(mem.iter == 0) / length(mem.iter)
-        pi1 <- sum.finite(mem.iter == 1) / length(mem.iter)
+        df$mem.iter = mem.init
+        pi0 <- sum.finite(df$mem.iter == 0) / length(df$mem.iter)
+        pi1 <- sum.finite(df$mem.iter == 1) / length(df$mem.iter)
     } else {
         post0 <- posterior.prob[,1]
         post1 <- posterior.prob[,2]
-        mem.iter = as.numeric(post1 > 0.5)
-        pi0 <- sum.finite(post0) / length(mem.iter)
-        pi1 <- sum.finite(post1) / length(mem.iter)
+        df$mem.iter = as.numeric(post1 > 0.5)
+        pi0 <- sum.finite(post0) / length(df$mem.iter)
+        pi1 <- sum.finite(post1) / length(df$mem.iter)
     }
 
     fail.fit.I = 0
     fit0 <- NULL
     fit1 <- NULL
 
-    if(sum(mem.iter==1) < min.cell.fit) {
+    if(sum(df$mem.iter==1) < min.cell.fit) {
         cat(paste0("Less than ", min.cell.fit,
                    " poistive cells detected in initialization. Consider decreasing the init.cos.cut, and check if the well contain stained cells."), fill=T)
         fail.fit.I = 1
-    } else if(sum(mem.iter==0) < min.cell.fit) {
+    } else if(sum(df$mem.iter==0) < min.cell.fit) {
         cat("Less than ", min.cell.fit,
             " negative cells detected in initialization. Consider increasing the init.cos.cut.", fill=T)
         fail.fit.I = 1
     } else {
-        if(sum(mem.iter==0) > max.cell.fit) {
-            df_fit0 = df[sample(which(mem.iter ==0), max.cell.fit), ]
+        min.tt.umi = quantile(df$tt.umi, min.quantile.fit)
+        max.tt.umi = quantile(df$tt.umi, max.quantile.fit)
+        df <- df[df$tt.umi >= min.tt.umi & df$tt.umi <= max.tt.umi, ,drop=F]
+        if(sum(df$mem.iter==0) > max.cell.fit) {
+            df_fit0 = df[sample(which(df$mem.iter ==0), max.cell.fit), ]
         } else {
-            df_fit0 = df[mem.iter == 0, ]
+            df_fit0 = df[df$mem.iter == 0, ]
         }
-        if(sum(mem.iter==1) > max.cell.fit) {
-            df_fit1 = df[sample(which(mem.iter ==1), max.cell.fit), ]
+        if(sum(df$mem.iter==1) > max.cell.fit) {
+            df_fit1 = df[sample(which(df$mem.iter ==1), max.cell.fit), ]
         } else {
-            df_fit1 = df[mem.iter ==1, ]
+            df_fit1 = df[df$mem.iter ==1, ]
         }
         tryCatch({
             fit0 = glm.nb("bc.umi~log(tt.umi)", df_fit0, link = log)

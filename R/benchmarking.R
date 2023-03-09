@@ -1,9 +1,13 @@
 
 
 #' @export
-confusion_stats <- function(call_label, true_label, row.exclude = 'NA', col.exclude = c("doublet", "unknown"), plot.path =getwd(), plot.name = 'benchmark_', width = 3.5, height = 2.5) {
+confusion_stats <- function(call_label, true_label,
+                            call.multiplet = 'NA', call.negative = 'NA',
+                            true.multiplet = "doublet", true.negative = "unknown",
+                            plot.path =getwd(), plot.name = 'benchmark_', width = 3.5, height = 2.5) {
     call_label <- as.character(call_label[names(true_label)])
-    call_label[is.na(call_label)] = 'NA'
+    #call_label = sapply(strsplit(call_label, "-|[.]"), function(x)x[1]) # This is to handel multi map to 1 case, name needs to be specified well
+    call_label[is.na(call_label) | call_label == 'NA'] = call.negative[1] # Treat NA as negative for now
     acc_mtx <- as.data.frame.matrix(table(call_label, true_label))
 
     breaksList <- seq(0,1e3,by=1e2)
@@ -11,16 +15,21 @@ confusion_stats <- function(call_label, true_label, row.exclude = 'NA', col.excl
     pheatmap(acc_mtx, cluster_rows = F, cluster_cols = F, display_numbers =T, number_format ="%.0f", fontsize = 8, fontsize_number=8, color = colorRampPalette(c("white", "#c73647"))(length(breaksList)), breaks = breaksList)
     dev.off()
 
-    use_row <- rownames(acc_mtx)[!rownames(acc_mtx) %in% row.exclude]
-    use_col <- colnames(acc_mtx)[!colnames(acc_mtx) %in% col.exclude]
+    use_row <- rownames(acc_mtx)[!rownames(acc_mtx) %in% c(call.multiplet, call.negative)]
+    use_col <- colnames(acc_mtx)[!colnames(acc_mtx) %in% c(true.multiplet, true.negative)]
     sub_mtx <- as.matrix(acc_mtx[use_row,use_col])
-    pc <- sum(diag(sub_mtx )) / sum(acc_mtx[use_row,use_col])
-    pc2 = sum(diag(sub_mtx )) / sum(acc_mtx[use_row,])
-    st <- sum(diag(sub_mtx )) / sum(acc_mtx)
+    #pc <- sum(diag(sub_mtx )) / sum(acc_mtx[use_row,use_col])
+    precision.singlet = sum(diag(sub_mtx )) / sum(acc_mtx[use_row,])
+    recall.singlet = sum(diag(sub_mtx )) / sum(acc_mtx[,use_col])
+    precision.multiplet = sum(acc_mtx[call.multiplet, true.multiplet]) / sum(acc_mtx[call.multiplet,])
+    recall.multiplet <- sum(acc_mtx[call.multiplet, true.multiplet]) / sum(acc_mtx[,true.multiplet])
 
     return(list(
         acc_mtx = acc_mtx,
-        stats = c(pc=pc, pc2=pc2, st=st)
+        stats = c(precision.singlet = precision.singlet,
+                  recall.singlet = recall.singlet,
+                  precision.multiplet = precision.multiplet,
+                  recall.multiplet = recall.multiplet)
     ))
 }
 
@@ -42,9 +51,11 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot
                           prob.cut = prob.cut,
                           min.cell.fit = 10,
                           max.cell.fit = max.cell.fit,
+                          min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
+                          max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
                           residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
                           plot.umap = c("residual", "umi"),
-                          plot.diagnostics = F,
+                          plot.diagnostics = T,
                           plot.path = plotPath,
                           plot.name = paste0(test_text),
                           umap.nn = 30L,
@@ -52,6 +63,7 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot
                           point.size = 1,
                           label.size = 3,
                           min.bc.show = 50)
+    assign("res2", res, env =.GlobalEnv)
     end_time <- Sys.time()
     calls <- res$assign_table$barcode_assign
     calls[res$assign_table$barcode_count == 0] = "Negative"
@@ -60,10 +72,14 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot
 
     use_time = end_time - start_time
     # Benchmarking
-    conf_stats = confusion_stats(calls, true_label, row.exclude = c("Multiplet", "Negative"), col.exclude = c("doublet", "unknown"), plot.path = plot.path, plot.name =plot.name, width = width, height = height)
+    conf_stats = confusion_stats(calls, true_label,
+                                 call.multiplet = 'Multiplet', call.negative = 'Negative',
+                                 true.multiplet = "doublet", true.negative = "unknown",
+                                 plot.path = plot.path, plot.name =plot.name, width = width, height = height)
 
     return(
         c(
+            list(call = calls),
             conf_stats,
             time = use_time)
     )
@@ -77,7 +93,7 @@ benchmark_demultiplex1 <- function(tag_mtx, true_label, plot.path =getwd(), plot
     start_time <- Sys.time()
     ## Round 1 -----------------------------------------------------------------------------------------------------
     ## Perform Quantile Sweep
-    bar.table <- tag_mtx  # Remove missing bars and summary columns
+    bar.table <- tag_mtx
     bar.table_sweep.list <- list()
     n <- 0
     for (q in seq(0.01, 0.99, by=0.02)) {
@@ -116,10 +132,15 @@ benchmark_demultiplex1 <- function(tag_mtx, true_label, plot.path =getwd(), plot
 
     use_time = end_time - start_time
     # Benchmarking
-    conf_stats = confusion_stats(final.calls, true_label, row.exclude = c("Doublet", "Negative"), col.exclude = c("doublet", "unknown"), plot.path = plot.path, plot.name =plot.name, width = width, height = height)
+    conf_stats = confusion_stats(final.calls, true_label,
+                                 call.multiplet = 'Doublet', call.negative = 'Negative',
+                                 true.multiplet = "doublet", true.negative = "unknown",
+                                 plot.path = plot.path, plot.name =plot.name, width = width, height = height)
 
     return(
-        c(conf_stats, time = use_time)
+        c(list(call = final.calls),
+          conf_stats,
+          time = use_time)
     )
 }
 
@@ -129,12 +150,6 @@ benchmark_HTODemux <- function(tag_mtx, rna_mtx, true_label, plot.path =getwd(),
     require(Seurat)
     start_time <- Sys.time()
     seu_obj <- CreateSeuratObject(counts = rna_mtx)
-
-    # Normalize RNA data with log normalization
-    seu_obj <- NormalizeData(seu_obj)
-    # Find and scale variable features
-    seu_obj <- FindVariableFeatures(seu_obj, selection.method = "mean.var.plot")
-    seu_obj <- ScaleData(seu_obj, features = VariableFeatures(seu_obj))
     seu_obj[["HTO"]] <- CreateAssayObject(counts = t(tag_mtx))
     # Normalize HTO data, here we use centered log-ratio (CLR) transformation
     seu_obj <- NormalizeData(seu_obj, assay = "HTO", normalization.method = "CLR")
@@ -143,13 +158,16 @@ benchmark_HTODemux <- function(tag_mtx, rna_mtx, true_label, plot.path =getwd(),
     use_levels = sort(unique(as.character(seu_obj$hash.ID)))
     use_levels <- c(use_levels[!use_levels %in% c("Doublet",  "Negative")], c("Doublet",  "Negative"))
     seu_obj$hash.ID <- factor(as.character(seu_obj$hash.ID), levels = use_levels)
-
+    assign("test1", seu_obj, env =.GlobalEnv)
     seu_call <- seu_obj$hash.ID
     end_time <- Sys.time()
     use_time = end_time - start_time
-    conf_stats = confusion_stats(seu_call, true_label, row.exclude = c("Doublet",  "Negative"), col.exclude = c("doublet", "unknown"), plot.path = plot.path, plot.name = plot.name, width = width, height = height)
+    conf_stats = confusion_stats(seu_call, true_label,
+                                 call.multiplet = 'Doublet', call.negative = 'Negative',
+                                 true.multiplet = "doublet", true.negative = "unknown",
+                                 plot.path = plot.path, plot.name = plot.name, width = width, height = height)
     return(
-        c(conf_stats, time = use_time)
+        c(list(call=seu_call), conf_stats, time = use_time)
     )
 }
 
@@ -165,9 +183,12 @@ benchmark_demuxmix_full <- function(tag_mtx, rna_mtx, true_label, plot.path = ge
     names(call_demuxmixfull) <- rownames(classLabels)
     end_time <- Sys.time()
     use_time = end_time - start_time
-    conf_stats = confusion_stats(call_demuxmixfull, true_label, row.exclude = c('multiplet', 'negative', 'uncertain'), col.exclude = c("doublet", "unknown"), plot.path = plot.path , plot.name = plot.name, width = width, height = height)
+    conf_stats = confusion_stats(call_demuxmixfull, true_label,
+                                 call.multiplet = 'multiplet', call.negative = c('negative', 'uncertain'),
+                                 true.multiplet = "doublet", true.negative = "unknown",
+                                 plot.path = plot.path , plot.name = plot.name, width = width, height = height)
     return(
-        c(conf_stats, time = use_time)
+        c(list(call=call_demuxmixfull), conf_stats, time = use_time)
     )
 }
 
@@ -182,13 +203,14 @@ benchmark_demuxmix_naive <- function(tag_mtx, true_label, plot.path = getwd(), p
     call_demuxmixNaive <- classLabelsNaive$assign
     names(call_demuxmixNaive) <- rownames(classLabelsNaive)
     test_text <- paste0("benchmark_Gaublomme_human_st_", "demuxmixNaive_")
-    bc_demuxmixNaive = confusion_stats(call_demuxmixNaive, true_label, row.exclude = c('multiplet', 'negative', 'uncertain'), col.exclude = c("doublet", "unknown"), plot.path =plotPath, plot.name = test_text, width = 3.5, height = 2.5)
-
     end_time <- Sys.time()
     use_time = end_time - start_time
-    conf_stats = confusion_stats(call_demuxmixNaive, true_label, row.exclude = c('multiplet', 'negative', 'uncertain'), col.exclude = c("doublet", "unknown"), plot.path = plot.path , plot.name = plot.name, width = width, height = height)
+    conf_stats = confusion_stats(call_demuxmixNaive, true_label,
+                                 call.multiplet = 'multiplet', call.negative = c('negative', 'uncertain'),
+                                 true.multiplet = "doublet", true.negative = "unknown",
+                                 plot.path = plot.path , plot.name = plot.name, width = width, height = height)
     return(
-        c(conf_stats, time = use_time)
+        c(list(call=call_demuxmixNaive), conf_stats, time = use_time)
     )
 }
 

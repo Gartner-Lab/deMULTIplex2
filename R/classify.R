@@ -15,6 +15,8 @@ demutiplexTags <- function(bc_mtx,
                           prob.cut = 0.5,
                           min.cell.fit = 10,
                           max.cell.fit = 1e4,
+                          min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
+                          max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
                           residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
                           plot.umap = c("residual", "umi"),
                           plot.diagnostics = F,
@@ -62,7 +64,8 @@ demutiplexTags <- function(bc_mtx,
 
         cat("Running EM for ", bc, sep = "", fill = T)
         if(length(init.cos.cut) > 1) cos.cut = init.cos.cut[which(barcodes == bc)] else cos.cut = init.cos.cut
-        res <- fit.em(df,init.cos.cut = cos.cut, converge.threshold = converge.threshold, max.iter = max.iter, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit)
+        res <- fit.em(df,init.cos.cut = cos.cut, converge.threshold = converge.threshold, max.iter = max.iter, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit,
+                      min.quantile.fit = min.quantile.fit, max.quantile.fit = max.quantile.fit)
 
         df <- res$df
         pr_mtx[,bc] <- df$pearson_residual
