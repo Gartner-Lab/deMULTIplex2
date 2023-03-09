@@ -41,7 +41,8 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
         }
 
         if(k > max.iter && abs(Q[k]-Q[k-1]) >= converge.threshold) {
-            cat("Warning: max number of iteration reached but algorithm did not converge to specified range. This is normally ok but please check the diagnostic plots. Consider increasing max.iter or max.cell.fit if fit is not good.", fill=T)
+            message("Max number of iteration reached.")
+            #cat("Warning: max number of iteration reached but algorithm did not converge to specified range. This is normally ok but please check the diagnostic plots. Consider increasing max.iter or max.cell.fit if fit is not good.", fill=T)
         }
     }
 
