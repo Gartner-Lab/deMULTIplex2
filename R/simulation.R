@@ -9,7 +9,8 @@ simulateTags <- function(n.cell = 1000,
                          min.log.size = 1,
                          max.log.size = 7,
                          b0 = -3,
-                         separate.sim = FALSE) {
+                         doublet.rate = .1,
+                         separate.sim = TRUE) {
     set.seed(seed)
     bcs = paste0("bc", 1:n.bc)
 
@@ -43,7 +44,8 @@ simulateTags <- function(n.cell = 1000,
         })
 
         final.umi.mtx = cell.true.umi.mtx + cell.contam.umi.mtx + bead.contam.umi.mtx
-    } else {
+    }
+    else {
         ## Combine 2 and 3 into a single NB? This can lead to a simpler model
         cell.surface.size= log(rowSums(cell.true.umi.mtx))
         mu_c = round(exp(1*cell.surface.size + b0))
@@ -54,6 +56,16 @@ simulateTags <- function(n.cell = 1000,
             rnegbin(length(cell.surface.size), mu = mu_list[,bc], theta = nb.theta)
         })
         final.umi.mtx = cell.true.umi.mtx + cbn.contam.umi.mtx
+    }
+
+    # Simulate doublet, inside cell.true.umi.mtx? TO BE DETERMINED
+    if(doublet.rate > 0) {
+        ndoublet = nrow(final.umi.mtx) * doublet.rate
+        doub_idx1 = sample(1:nrow(final.umi.mtx), ndoublet)
+        doub_idx2 = sample(1:nrow(final.umi.mtx), ndoublet)
+        doub.umi.mtx = final.umi.mtx[doub_idx1, ] + final.umi.mtx[doub_idx2, ]
+        rownames(doub.umi.mtx) <- paste0('doublet_', 1:nrow(doub.umi.mtx))
+        final.umi.mtx <- rbind(final.umi.mtx, doub.umi.mtx)
     }
 
     return(final.umi.mtx)

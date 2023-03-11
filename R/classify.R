@@ -15,6 +15,8 @@ demutiplexTags <- function(bc_mtx,
                           prob.cut = 0.5,
                           min.cell.fit = 10,
                           max.cell.fit = 1e4,
+                          min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
+                          max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
                           residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
                           plot.umap = c("residual", "umi"),
                           plot.diagnostics = F,
@@ -62,7 +64,8 @@ demutiplexTags <- function(bc_mtx,
 
         cat("Running EM for ", bc, sep = "", fill = T)
         if(length(init.cos.cut) > 1) cos.cut = init.cos.cut[which(barcodes == bc)] else cos.cut = init.cos.cut
-        res <- fit.em(df,init.cos.cut = cos.cut, converge.threshold = converge.threshold, max.iter = max.iter, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit)
+        res <- fit.em(df,init.cos.cut = cos.cut, converge.threshold = converge.threshold, max.iter = max.iter, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit,
+                      min.quantile.fit = min.quantile.fit, max.quantile.fit = max.quantile.fit)
 
         df <- res$df
         pr_mtx[,bc] <- df$pearson_residual
@@ -151,7 +154,7 @@ demutiplexTags <- function(bc_mtx,
                 c("log(tt.umi)", "res", "prob.pos"),
                 #c("log(tt.umi)", "cos.umi", "cos.umi"),
                 #c("log(tt.umi)", "res", "cos.umi"),
-                #c("qq"),
+                c("qq"),
                 #c("log(res)", "res", "cos.res"),
                 #c("log(res)", "cos.res", "cos.res"),
                 #c("UMAP_1", "UMAP_2", "res"),
@@ -160,7 +163,7 @@ demutiplexTags <- function(bc_mtx,
             )
             assign("df", df, env = .GlobalEnv)
             df$barcode_count[call_mtx[,bc] == 0] = NA
-            glist[[bc]] <- plot.all.diagnostics(df, mappings, bc = bc, point.size = point.size, ncol=3)
+            glist[[bc]] <- plot.all.diagnostics(df, mappings, bc = bc, prob.cut = prob.cut, point.size = point.size, ncol=3)
         }
     }
 
@@ -257,13 +260,13 @@ plotSummary <- function(df, point.size = 1, label.size = 3 , min.bc.show = 50) {
 }
 
 
-plot.all.diagnostics <- function(df, mappings, bc, point.size = 1, ncol = 3) {
+plot.all.diagnostics <- function(df, mappings, bc, prob.cut = 0.5, point.size = 1, ncol = 3) {
     plot_list <- list()
     for(i in 1:length(mappings)){
         map <- mappings[[i]]
         if(map[1] == "qq") {
             # QQ plot
-            p = ggplot(df, aes(sample=res))+stat_qq(size = point.size, stroke = 0) +
+            p = ggplot(df[df$prob.pos < prob.cut,], aes(sample=res))+stat_qq(size = point.size, stroke = 0) +
                 stat_qq_line() +
                 xlab("Normal quantiles") +
                 ylab("Residual quantiles") +
