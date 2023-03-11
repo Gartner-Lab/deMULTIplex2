@@ -2,45 +2,71 @@
 
 #' @export
 confusion_stats <- function(call_label, true_label,
-                            call.multiplet = 'NA', call.negative = 'NA',
-                            true.multiplet = "doublet", true.negative = "unknown",
+                            tag_mapping,
+                            call.multiplet = 'Multiplet',
+                            true.multiplet = "doublet",
                             plot.path =getwd(), plot.name = 'benchmark_', width = 3.5, height = 2.5) {
     call_label <- as.character(call_label[names(true_label)])
-    #call_label = sapply(strsplit(call_label, "-|[.]"), function(x)x[1]) # This is to handel multi map to 1 case, name needs to be specified well
-    call_label[is.na(call_label) | call_label == 'NA'] = call.negative[1] # Treat NA as negative for now
+    call_label[is.na(call_label)] <- 'NA'
     acc_mtx <- as.data.frame.matrix(table(call_label, true_label))
-
     breaksList <- seq(0,1e3,by=1e2)
+    graphics.off() # Shut down open plotting devices if any left over
     pdf(paste0(plot.path, plot.name, "_accmtx", ".pdf"), width = 3.5, height = 2.5)
     pheatmap(acc_mtx, cluster_rows = F, cluster_cols = F, display_numbers =T, number_format ="%.0f", fontsize = 8, fontsize_number=8, color = colorRampPalette(c("white", "#c73647"))(length(breaksList)), breaks = breaksList)
     dev.off()
 
-    use_row <- rownames(acc_mtx)[!rownames(acc_mtx) %in% c(call.multiplet, call.negative)]
-    use_col <- colnames(acc_mtx)[!colnames(acc_mtx) %in% c(true.multiplet, true.negative)]
-    sub_mtx <- as.matrix(acc_mtx[use_row,use_col])
-    #pc <- sum(diag(sub_mtx )) / sum(acc_mtx[use_row,use_col])
-    precision.singlet = sum(diag(sub_mtx )) / sum(acc_mtx[use_row,])
-    recall.singlet = sum(diag(sub_mtx )) / sum(acc_mtx[,use_col])
-    precision.multiplet = sum(acc_mtx[call.multiplet, true.multiplet]) / sum(acc_mtx[call.multiplet,])
-    recall.multiplet <- sum(acc_mtx[call.multiplet, true.multiplet]) / sum(acc_mtx[,true.multiplet])
+    unq_tags <- tag_mapping$tag
+    tag_stats <- list()
+    for(tag in unq_tags) {
+        tp <- sum(call_label == tag & true_label %in% tag_mapping$true_label[tag_mapping$tag == tag], na.rm=T)
+        fp <- sum(call_label == tag, na.rm=T) - tp
+        fn <- sum(call_label != tag & true_label %in% tag_mapping$true_label[tag_mapping$tag == tag], na.rm=T)
+        precision = tp/(tp+fp); if(is.na(precision)) precision = 0
+        recall = tp/(tp+fn)
+        f_score <- tp / (tp + 0.5 * (fp + fn))
+        tag_stats[[tag]] <- c(
+            tp = tp, fp=fp, fn=fn,
+            precision=precision,
+            recall=recall,
+            f_score=f_score
+        )
+    }
+    assign("tag_stats",tag_stats, env=.GlobalEnv)
+    singlet_stats <- c(
+        precision = mean(sapply(tag_stats, function(x)x['precision'])),
+        recall = mean(sapply(tag_stats, function(x)x['recall'])),
+        f_score = mean(sapply(tag_stats, function(x)x['f_score']))
+    )
+
+    doublet_called_singlet_rate <- sum(true_label == true.multiplet & call_label %in% tag_mapping$tag, na.rm=T) / sum(true_label == true.multiplet, na.rm=T)
+    doublet_called_negative_rate <- sum(true_label == true.multiplet & !call_label %in% c(tag_mapping$tag, call.multiplet), na.rm=T) / sum(true_label == true.multiplet, na.rm=T)
+    doublet_called_doublet_rate <- sum(true_label == true.multiplet & call_label == call.multiplet, na.rm=T) / sum(true_label == true.multiplet, na.rm=T)
+    doublet_stats <- c(recall = doublet_called_doublet_rate , doublet_called_singlet = doublet_called_singlet_rate, doublet_called_negative = doublet_called_negative_rate)
 
     return(list(
         acc_mtx = acc_mtx,
-        stats = c(precision.singlet = precision.singlet,
-                  recall.singlet = recall.singlet,
-                  precision.multiplet = precision.multiplet,
-                  recall.multiplet = recall.multiplet)
+        tag_stats = tag_stats,
+        singlet_avg_stats = singlet_stats,
+        doublet_avg_stats = doublet_stats
     ))
 }
 
 #' @export
-benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot.name = 'benchmark_demultiplex2', width = 3.5, height = 2.5,
+benchmark_demultiplex2 <- function(tag_mtx, true_label,
+                                   tag_mapping,
+                                   true.multiplet = "doublet",
+                                   plot.path =getwd(), plot.name = 'benchmark_demultiplex2', width = 3.5, height = 2.5,
                                    seed = 1,
                                    init.cos.cut = .5,
                                    converge.threshold = 1e-3,
                                    prob.cut = 0.5,
                                    max.cell.fit = 1000,
-                                   max.iter = 30) {
+                                   max.iter = 30,
+                                   min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
+                                   max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
+                                   residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
+                                   plot.umap = c("residual", "umi"),
+                                   plot.diagnostics = T) {
     set.seed(seed)
     require(deMULTIplex2)
     start_time <- Sys.time()
@@ -51,11 +77,11 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot
                           prob.cut = prob.cut,
                           min.cell.fit = 10,
                           max.cell.fit = max.cell.fit,
-                          min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
-                          max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
-                          residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
-                          plot.umap = c("residual", "umi"),
-                          plot.diagnostics = T,
+                          min.quantile.fit = min.quantile.fit, # Remove cells with total umi less than the specified quantile, which could be beads
+                          max.quantile.fit = max.quantile.fit, # Remove cells with total umi greater than the specified quantile, which could be multiplets
+                          residual.type = residual.type, # ONLY use RQR for future
+                          plot.umap = plot.umap,
+                          plot.diagnostics = plot.diagnostics,
                           plot.path = plotPath,
                           plot.name = paste0(test_text),
                           umap.nn = 30L,
@@ -63,7 +89,6 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot
                           point.size = 1,
                           label.size = 3,
                           min.bc.show = 50)
-    assign("res2", res, env =.GlobalEnv)
     end_time <- Sys.time()
     calls <- res$assign_table$barcode_assign
     calls[res$assign_table$barcode_count == 0] = "Negative"
@@ -72,14 +97,14 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot
 
     use_time = end_time - start_time
     # Benchmarking
-    conf_stats = confusion_stats(calls, true_label,
-                                 call.multiplet = 'Multiplet', call.negative = 'Negative',
-                                 true.multiplet = "doublet", true.negative = "unknown",
-                                 plot.path = plot.path, plot.name =plot.name, width = width, height = height)
-
+    conf_stats <- confusion_stats(calls, true_label,
+                             tag_mapping,
+                             call.multiplet = 'Multiplet',
+                             true.multiplet = "Doublet",
+                             plot.path = plot.path, plot.name = plot.name, width = width, height = height)
     return(
         c(
-            list(call = calls),
+            list(res = res),
             conf_stats,
             time = use_time)
     )
@@ -87,7 +112,10 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label, plot.path =getwd(), plot
 
 
 #' @export
-benchmark_demultiplex1 <- function(tag_mtx, true_label, plot.path =getwd(), plot.name = 'benchmark_demultiplex1', width = 3.5, height = 2.5) {
+benchmark_demultiplex1 <- function(tag_mtx, true_label,
+                                   tag_mapping,
+                                   true.multiplet = "doublet",
+                                   plot.path =getwd(), plot.name = 'benchmark_demultiplex1', width = 3.5, height = 2.5) {
     require(deMULTIplex)
 
     start_time <- Sys.time()
@@ -133,12 +161,13 @@ benchmark_demultiplex1 <- function(tag_mtx, true_label, plot.path =getwd(), plot
     use_time = end_time - start_time
     # Benchmarking
     conf_stats = confusion_stats(final.calls, true_label,
-                                 call.multiplet = 'Doublet', call.negative = 'Negative',
-                                 true.multiplet = "doublet", true.negative = "unknown",
+                                 tag_mapping,
+                                 call.multiplet = 'Doublet',
+                                 true.multiplet = true.multiplet,
                                  plot.path = plot.path, plot.name =plot.name, width = width, height = height)
 
     return(
-        c(list(call = final.calls),
+        c(list(res = final.calls),
           conf_stats,
           time = use_time)
     )
@@ -146,7 +175,11 @@ benchmark_demultiplex1 <- function(tag_mtx, true_label, plot.path =getwd(), plot
 
 
 #' @export
-benchmark_HTODemux <- function(tag_mtx, rna_mtx, true_label, plot.path =getwd(), plot.name = 'benchmark_HTODemux', width = 3.5, height = 2.5) {
+benchmark_HTODemux <- function(tag_mtx, rna_mtx,
+                               true_label,
+                               tag_mapping,
+                               true.multiplet = "doublet",
+                               plot.path =getwd(), plot.name = 'benchmark_HTODemux', width = 3.5, height = 2.5) {
     require(Seurat)
     start_time <- Sys.time()
     seu_obj <- CreateSeuratObject(counts = rna_mtx)
@@ -158,22 +191,27 @@ benchmark_HTODemux <- function(tag_mtx, rna_mtx, true_label, plot.path =getwd(),
     use_levels = sort(unique(as.character(seu_obj$hash.ID)))
     use_levels <- c(use_levels[!use_levels %in% c("Doublet",  "Negative")], c("Doublet",  "Negative"))
     seu_obj$hash.ID <- factor(as.character(seu_obj$hash.ID), levels = use_levels)
-    assign("test1", seu_obj, env =.GlobalEnv)
-    seu_call <- seu_obj$hash.ID
+    seu_call <- as.character(seu_obj$hash.ID)
+    names(seu_call) <- colnames(seu_obj)
     end_time <- Sys.time()
     use_time = end_time - start_time
     conf_stats = confusion_stats(seu_call, true_label,
-                                 call.multiplet = 'Doublet', call.negative = 'Negative',
-                                 true.multiplet = "doublet", true.negative = "unknown",
+                                 tag_mapping,
+                                 call.multiplet = 'Doublet',
+                                 true.multiplet = true.multiplet,
                                  plot.path = plot.path, plot.name = plot.name, width = width, height = height)
     return(
-        c(list(call=seu_call), conf_stats, time = use_time)
+        c(list(res=seu_call), conf_stats, time = use_time)
     )
 }
 
 
 #' @export
-benchmark_demuxmix_full <- function(tag_mtx, rna_mtx, true_label, plot.path = getwd(), plot.name = 'benchmark_demuxmix_full_', width = 3.5, height = 2.5) {
+benchmark_demuxmix_full <- function(tag_mtx, rna_mtx,
+                                    true_label,
+                                    tag_mapping,
+                                    true.multiplet = "doublet",
+                                    plot.path = getwd(), plot.name = 'benchmark_demuxmix_full_', width = 3.5, height = 2.5) {
     start_time <- Sys.time()
     dmm <- demuxmix(as.matrix(t(tag_mtx)), rna = colSums(rna_mtx > 0))
     classLabels <- dmmClassify(dmm)
@@ -183,10 +221,11 @@ benchmark_demuxmix_full <- function(tag_mtx, rna_mtx, true_label, plot.path = ge
     names(call_demuxmixfull) <- rownames(classLabels)
     end_time <- Sys.time()
     use_time = end_time - start_time
-    conf_stats = confusion_stats(call_demuxmixfull, true_label,
-                                 call.multiplet = 'multiplet', call.negative = c('negative', 'uncertain'),
-                                 true.multiplet = "doublet", true.negative = "unknown",
-                                 plot.path = plot.path , plot.name = plot.name, width = width, height = height)
+    conf_stats <- confusion_stats(call_demuxmixfull, true_label,
+                                  tag_mapping = tag_mapping,
+                                  call.multiplet = 'multiplet',
+                                  true.multiplet = true.multiplet,
+                                  plot.path = plot.path , plot.name = plot.name, width = width, height = height)
     return(
         c(list(call=call_demuxmixfull), conf_stats, time = use_time)
     )
@@ -194,7 +233,11 @@ benchmark_demuxmix_full <- function(tag_mtx, rna_mtx, true_label, plot.path = ge
 
 
 #' @export
-benchmark_demuxmix_naive <- function(tag_mtx, true_label, plot.path = getwd(), plot.name = 'benchmark_demuxmix_naive', width = 3.5, height = 2.5) {
+benchmark_demuxmix_naive <- function(tag_mtx,
+                                     true_label,
+                                     tag_mapping,
+                                     true.multiplet = "doublet",
+                                     plot.path = getwd(), plot.name = 'benchmark_demuxmix_naive', width = 3.5, height = 2.5) {
     start_time <- Sys.time()
     dmmNaive <- demuxmix(as.matrix(t(tag_mtx)), model = "naive")
     classLabelsNaive <- dmmClassify(dmmNaive)
@@ -205,10 +248,11 @@ benchmark_demuxmix_naive <- function(tag_mtx, true_label, plot.path = getwd(), p
     test_text <- paste0("benchmark_Gaublomme_human_st_", "demuxmixNaive_")
     end_time <- Sys.time()
     use_time = end_time - start_time
-    conf_stats = confusion_stats(call_demuxmixNaive, true_label,
-                                 call.multiplet = 'multiplet', call.negative = c('negative', 'uncertain'),
-                                 true.multiplet = "doublet", true.negative = "unknown",
-                                 plot.path = plot.path , plot.name = plot.name, width = width, height = height)
+    conf_stats <- confusion_stats(call_demuxmixNaive, true_label,
+                                  tag_mapping = tag_mapping,
+                                  call.multiplet = 'multiplet',
+                                  true.multiplet = true.multiplet,
+                                  plot.path = plot.path , plot.name = plot.name, width = width, height = height)
     return(
         c(list(call=call_demuxmixNaive), conf_stats, time = use_time)
     )
