@@ -161,7 +161,7 @@ demutiplexTags <- function(bc_mtx,
                 c("UMAP_1", "UMAP_2", "prob.pos"),
                 c("UMAP_1", "UMAP_2", "barcode_count")
             )
-            assign("df", df, env = .GlobalEnv)
+            #assign("df", df, env = .GlobalEnv)
             df$barcode_count[call_mtx[,bc] == 0] = NA
             glist[[bc]] <- plot.all.diagnostics(df, mappings, bc = bc, prob.cut = prob.cut, point.size = point.size, ncol=3)
         }
