@@ -56,7 +56,7 @@ demutiplexTags <- function(bc_mtx,
     prob_mtx <- pr_mtx
 
     coef_list <- list()
-
+    df_list<-list()
     for(bc in barcodes) {
         df <- data.frame(bc.umi = bc_mtx[, bc],
                          cos.umi = cos.umi_mtx[,bc])
@@ -68,6 +68,7 @@ demutiplexTags <- function(bc_mtx,
                       min.quantile.fit = min.quantile.fit, max.quantile.fit = max.quantile.fit)
 
         df <- res$df
+        df_list[[bc]] <- df
         pr_mtx[,bc] <- df$pearson_residual
         rqr_mtx[,bc] <- df$rqr
         prob_mtx[,bc] <- df$post1
@@ -184,7 +185,8 @@ demutiplexTags <- function(bc_mtx,
             rqr_mtx = rqr_mtx,
             pr_mtx = pr_mtx,
             prob_mtx = prob_mtx,
-            coefs = coef_list
+            coefs = coef_list,
+            df_list = df_list
         )
     )
 }
