@@ -100,7 +100,7 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
     conf_stats <- confusion_stats(calls, true_label,
                              tag_mapping,
                              call.multiplet = 'Multiplet',
-                             true.multiplet = "Doublet",
+                             true.multiplet = true.multiplet,
                              plot.path = plot.path, plot.name = plot.name, width = width, height = height)
     return(
         c(

@@ -56,7 +56,7 @@ demutiplexTags <- function(bc_mtx,
     prob_mtx <- pr_mtx
 
     coef_list <- list()
-
+    df_list<-list()
     for(bc in barcodes) {
         df <- data.frame(bc.umi = bc_mtx[, bc],
                          cos.umi = cos.umi_mtx[,bc])
@@ -68,6 +68,7 @@ demutiplexTags <- function(bc_mtx,
                       min.quantile.fit = min.quantile.fit, max.quantile.fit = max.quantile.fit)
 
         df <- res$df
+        df_list[[bc]] <- df
         pr_mtx[,bc] <- df$pearson_residual
         rqr_mtx[,bc] <- df$rqr
         prob_mtx[,bc] <- df$post1
@@ -97,7 +98,9 @@ demutiplexTags <- function(bc_mtx,
     barcode_assign <- apply(call_mtx, 1, function(x) {
         if (sum(x) == 1) colnames(call_mtx)[which(x)] else NA
     })
-    assign_table = data.frame(barcode_assign = barcode_assign, barcode_count = barcode_count)
+
+    assign_table = data.frame(barcode_assign = barcode_assign, barcode_count = barcode_count,
+                              droplet_type = ifelse(barcode_count == 1, 'singlet', ifelse(barcode_count == 0, 'negative', 'multiplet')))
 
     # UMAP Plotting Options
     if (plot.umap == "umi") { # Raw UMI Counts
@@ -161,7 +164,7 @@ demutiplexTags <- function(bc_mtx,
                 c("UMAP_1", "UMAP_2", "prob.pos"),
                 c("UMAP_1", "UMAP_2", "barcode_count")
             )
-            assign("df", df, env = .GlobalEnv)
+            #assign("df", df, env = .GlobalEnv)
             df$barcode_count[call_mtx[,bc] == 0] = NA
             glist[[bc]] <- plot.all.diagnostics(df, mappings, bc = bc, prob.cut = prob.cut, point.size = point.size, ncol=3)
         }
@@ -184,7 +187,8 @@ demutiplexTags <- function(bc_mtx,
             rqr_mtx = rqr_mtx,
             pr_mtx = pr_mtx,
             prob_mtx = prob_mtx,
-            coefs = coef_list
+            coefs = coef_list,
+            df_list = df_list
         )
     )
 }
