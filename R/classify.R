@@ -98,7 +98,9 @@ demutiplexTags <- function(bc_mtx,
     barcode_assign <- apply(call_mtx, 1, function(x) {
         if (sum(x) == 1) colnames(call_mtx)[which(x)] else NA
     })
-    assign_table = data.frame(barcode_assign = barcode_assign, barcode_count = barcode_count)
+
+    assign_table = data.frame(barcode_assign = barcode_assign, barcode_count = barcode_count,
+                              droplet_type = ifelse(barcode_count == 1, 'singlet', ifelse(barcode_count == 0, 'negative', 'multiplet')))
 
     # UMAP Plotting Options
     if (plot.umap == "umi") { # Raw UMI Counts

@@ -75,10 +75,13 @@ simulateTags <- function(n.cell = 1000,
     # Simulate doublet, inside cell.true.umi.mtx? TO BE DETERMINED
     if(doublet.rate > 0) {
         ndoublet = nrow(final.umi.mtx) * doublet.rate
-        doub_idx1 = sample(1:nrow(final.umi.mtx), ndoublet)
-        doub_idx2 = sample(1:nrow(final.umi.mtx), ndoublet)
-        doub.umi.mtx = final.umi.mtx[doub_idx1, ] + final.umi.mtx[doub_idx2, ]
-        rownames(doub.umi.mtx) <- paste0('doublet_', 1:nrow(doub.umi.mtx))
+        doub.idx1 = sample(1:nrow(final.umi.mtx), ndoublet)
+        doub.idx2 = sample(1:nrow(final.umi.mtx), ndoublet)
+        # doub.umi.mtx = final.umi.mtx[doub.idx1, ] + final.umi.mtx[doub.idx2, ]
+        ambient.contam.idx = sample(1:nrow(ambient.contam.umi.mtx), ndoublet)
+        doub.umi.mtx = cell.true.umi.mtx[doub.idx1, ] + cell.contam.umi.mtx[doub.idx1, ] +
+            cell.true.umi.mtx[doub.idx2, ] + cell.contam.umi.mtx[doub.idx2, ] + ambient.contam.umi.mtx[ambient.contam.idx, ]
+        rownames(doub.umi.mtx) <- paste0('doublet_', 1:nrow(doub.umi.mtx), "|", rownames(final.umi.mtx)[doub.idx1], "_", rownames(final.umi.mtx)[doub.idx2])
         final.umi.mtx <- rbind(final.umi.mtx, doub.umi.mtx)
     }
 
