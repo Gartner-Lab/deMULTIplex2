@@ -22,8 +22,8 @@ confusion_stats <- function(call_label, true_label,
         fp <- sum(call_label == tag, na.rm=T) - tp
         fn <- sum(call_label != tag & true_label %in% tag_mapping$true_label[tag_mapping$tag == tag], na.rm=T)
         precision = tp/(tp+fp); if(is.na(precision)) precision = 0
-        recall = tp/(tp+fn)
-        f_score <- tp / (tp + 0.5 * (fp + fn))
+        recall = tp/(tp+fn); if(is.na(recall)) recall = 0
+        f_score <- tp / (tp + 0.5 * (fp + fn)); if(is.na(f_score)) f_score = 0
         tag_stats[[tag]] <- c(
             tp = tp, fp=fp, fn=fn,
             precision=precision,
@@ -33,7 +33,7 @@ confusion_stats <- function(call_label, true_label,
     }
     assign("tag_stats",tag_stats, env=.GlobalEnv)
     singlet_stats <- c(
-        precision = mean(sapply(tag_stats, function(x)x['precision'])),
+        precision = mean(sapply(tag_stats, function(x)x['precision'])), # na.rm?
         recall = mean(sapply(tag_stats, function(x)x['recall'])),
         f_score = mean(sapply(tag_stats, function(x)x['f_score']))
     )
@@ -82,8 +82,8 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
                           residual.type = residual.type, # ONLY use RQR for future
                           plot.umap = plot.umap,
                           plot.diagnostics = plot.diagnostics,
-                          plot.path = plotPath,
-                          plot.name = paste0(test_text),
+                          plot.path = plot.path,
+                          plot.name = plot.name,
                           umap.nn = 30L,
                           seed = 1,
                           point.size = 1,
