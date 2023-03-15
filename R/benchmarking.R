@@ -20,7 +20,7 @@ confusion_stats <- function(call_label, true_label,
     for(tag in unq_tags) {
         tp <- sum(call_label == tag & true_label %in% tag_mapping$true_label[tag_mapping$tag == tag], na.rm=T)
         fp <- sum(call_label == tag, na.rm=T) - tp
-        fn <- sum(call_label != tag & true_label %in% tag_mapping$true_label[tag_mapping$tag == tag], na.rm=T)
+        fn <- sum(call_label != tag & true_label %in% tag_mapping$true_label[tag_mapping$tag == tag], na.rm=T) # Note when multiple-to-one mapping exists this code does not work
         precision = tp/(tp+fp); if(is.na(precision)) precision = 0
         recall = tp/(tp+fn); if(is.na(recall)) recall = 0
         f_score <- tp / (tp + 0.5 * (fp + fn)); if(is.na(f_score)) f_score = 0
