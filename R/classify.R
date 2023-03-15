@@ -9,9 +9,9 @@
 #' @importFrom magrittr %>%
 #' @export
 demutiplexTags <- function(bc_mtx,
-                          init.cos.cut = 0.7,
+                          init.cos.cut = 0.5,
                           converge.threshold = 1e-3,
-                          max.iter = 1e2,
+                          max.iter = 30,
                           prob.cut = 0.5,
                           min.cell.fit = 10,
                           max.cell.fit = 1e4,
