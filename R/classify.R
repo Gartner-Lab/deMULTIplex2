@@ -18,7 +18,7 @@ demutiplexTags <- function(bc_mtx,
                           min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
                           max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
                           residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
-                          plot.umap = c("residual", "umi"),
+                          plot.umap = c("residual", "umi", "none"),
                           plot.diagnostics = F,
                           plot.path = getwd(),
                           plot.name = "",
@@ -113,7 +113,7 @@ demutiplexTags <- function(bc_mtx,
 
     glist <- list()
 
-    if(1) { # Always plot
+    if(plot.umap!="none") { # Always plot
         message("Plotting final umap...")
         umap_df <- cbind(umap_res, assign_table)
         umap_df$barcode_count = as.character(umap_df$barcode_count)
@@ -139,6 +139,7 @@ demutiplexTags <- function(bc_mtx,
 
     # Diagnostic Plots
     if (plot.diagnostics) {
+        if(plot.umap=="none") stop("Please specify plot.umap.")
         for (bc in barcodes) {
             df <- data.frame(
                 bc.umi = bc_mtx[, bc],
@@ -171,13 +172,15 @@ demutiplexTags <- function(bc_mtx,
     }
 
     time <- (Sys.time() %>% make.names() %>% strsplit(split = "X") %>% unlist())[2]
-    pdf(paste0(plot.path, "/", plot.name, "_", time, "_assignment.pdf"), width = 20, height = 15)
-    for(i in 1:length(glist)) {
-        grid.newpage()
-        message(paste0("Plotting ", names(glist)[i]))
-        grid.draw(glist[[i]])
+    if(length(glist)) {
+        pdf(paste0(plot.path, "/", plot.name, "_", time, "_assignment.pdf"), width = 20, height = 15)
+        for(i in 1:length(glist)) {
+            grid.newpage()
+            message(paste0("Plotting ", names(glist)[i]))
+            grid.draw(glist[[i]])
+        }
+        dev.off()
     }
-    dev.off()
 
     return(
         list(
