@@ -87,8 +87,6 @@ demutiplexTags <- function(bc_mtx,
     }
 
     res_mtx <- Matrix(as.matrix(res_mtx), sparse = T)
-    vec_norm2 <- apply(res_mtx, 1, function(x) norm(x, type = "2"))
-    cos.res_mtx <- res_mtx / vec_norm2
 
     # Assign barcodes to cells
     call_mtx <- sapply(colnames(prob_mtx), function(bc) {
@@ -145,7 +143,6 @@ demutiplexTags <- function(bc_mtx,
                 bc.umi = bc_mtx[, bc],
                 res = res_mtx[,bc],
                 cos.umi = cos.umi_mtx[,bc],
-                cos.res = cos.res_mtx[,bc],
                 prob.pos = prob_mtx[,bc])
             df$tt.umi <- rowSums(bc_mtx)
             df <- cbind(df, umap_df)

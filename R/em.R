@@ -170,7 +170,10 @@ m.step <- function(df, posterior.prob, mem.init = NULL, min.cell.fit = 10, max.c
     fit0 <- NULL
     fit1 <- NULL
 
-    if(sum(df$mem.iter==1) < min.cell.fit) {
+    if(any(is.na(df$mem.iter))) {
+        cat(paste0("Something went wrong in fitting"), fill=T)
+        fail.fit.I = 1
+    } else if(sum(df$mem.iter==1) < min.cell.fit) {
         cat(paste0("Less than ", min.cell.fit,
                    " poistive cells detected in initialization. Consider decreasing the init.cos.cut, and check if the well contain stained cells."), fill=T)
         fail.fit.I = 1
