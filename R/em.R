@@ -75,7 +75,8 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
     # Compute some resduals
     df$pearson_residual <- (df[['bc.umi']]-df$pred0)/sqrt(df$pred0 + df$pred0^2/fit0$theta)
     df$rqr <- rqr.nb(df, y="bc.umi",fit="pred0", model = fit0)
-
+    df$diff <- df$tt.umi - df$bc.umi
+    df$rqr_p <- rqr.nb(df, y="diff",fit="pred1", model = fit1)
     return(list(
         df = df,
         plots = glist,
