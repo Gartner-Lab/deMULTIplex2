@@ -75,7 +75,8 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
     # Compute some resduals
     df$pearson_residual <- (df[['bc.umi']]-df$pred0)/sqrt(df$pred0 + df$pred0^2/fit0$theta)
     df$rqr <- rqr.nb(df, y="bc.umi",fit="pred0", model = fit0)
-
+    df$diff <- df$tt.umi - df$bc.umi
+    df$rqr_p <- rqr.nb(df, y="diff",fit="pred1", model = fit1)
     return(list(
         df = df,
         plots = glist,
@@ -170,7 +171,10 @@ m.step <- function(df, posterior.prob, mem.init = NULL, min.cell.fit = 10, max.c
     fit0 <- NULL
     fit1 <- NULL
 
-    if(sum(df$mem.iter==1) < min.cell.fit) {
+    if(any(is.na(df$mem.iter))) {
+        cat(paste0("Something went wrong in fitting"), fill=T)
+        fail.fit.I = 1
+    } else if(sum(df$mem.iter==1) < min.cell.fit) {
         cat(paste0("Less than ", min.cell.fit,
                    " poistive cells detected in initialization. Consider decreasing the init.cos.cut, and check if the well contain stained cells."), fill=T)
         fail.fit.I = 1

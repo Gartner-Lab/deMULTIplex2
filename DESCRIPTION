@@ -1,7 +1,7 @@
 Package: deMULTIplex2
 Type: Package
 Title: deMULTIplex2 for demultiplexing multiplexed single cell data
-Version: 0.0.1
+Version: 0.9.0
 Author: Qin Zhu, Danny Conrad, Zev Gartner
 Maintainer: Qin Zhu <qin.zhu@ucsf.edu>, Danny Conrad <Danny.Conrad@ucsf.edu>
 Description: deMULTIplex2 for demultiplexing multiplexed single cell data
@@ -28,7 +28,7 @@ Depends:
     stringdist,
     readxl
 Imports:
-License: GPL-3
+License: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License
 Encoding: UTF-8
 LazyData: true
 biocViews: Software, Sequencing, RNASeq

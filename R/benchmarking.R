@@ -15,16 +15,16 @@ confusion_stats <- function(call_label, true_label,
     pheatmap(acc_mtx, cluster_rows = F, cluster_cols = F, display_numbers =T, number_format ="%.0f", fontsize = 8, fontsize_number=8, color = colorRampPalette(c("white", "#c73647"))(length(breaksList)), breaks = breaksList)
     dev.off()
 
-    unq_tags <- tag_mapping$tag
+    unq_true_label <- tag_mapping$true_label
     tag_stats <- list()
-    for(tag in unq_tags) {
-        tp <- sum(call_label == tag & true_label %in% tag_mapping$true_label[tag_mapping$tag == tag], na.rm=T)
-        fp <- sum(call_label == tag, na.rm=T) - tp
-        fn <- sum(call_label != tag & true_label %in% tag_mapping$true_label[tag_mapping$tag == tag], na.rm=T)
+    for(tb in unq_true_label) {
+        tp <- sum(call_label %in% tag_mapping$tag[tag_mapping$true_label == tb] & true_label %in% tag_mapping$true_label[tag_mapping$true_label == tb], na.rm=T)
+        fp <- sum(call_label %in% tag_mapping$tag[tag_mapping$true_label == tb], na.rm=T) - tp
+        fn <- sum(!call_label %in% tag_mapping$tag[tag_mapping$true_label == tb] & true_label %in% tag_mapping$true_label[tag_mapping$true_label == tb], na.rm=T) # Note when multiple-to-one mapping exists this code does not work
         precision = tp/(tp+fp); if(is.na(precision)) precision = 0
         recall = tp/(tp+fn); if(is.na(recall)) recall = 0
         f_score <- tp / (tp + 0.5 * (fp + fn)); if(is.na(f_score)) f_score = 0
-        tag_stats[[tag]] <- c(
+        tag_stats[[tb]] <- c(
             tp = tp, fp=fp, fn=fn,
             precision=precision,
             recall=recall,
@@ -89,6 +89,7 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
                           point.size = 1,
                           label.size = 3,
                           min.bc.show = 50)
+    assign("res",res, env=.GlobalEnv)
     end_time <- Sys.time()
     calls <- res$assign_table$barcode_assign
     calls[res$assign_table$barcode_count == 0] = "Negative"
@@ -213,7 +214,7 @@ benchmark_demuxmix_full <- function(tag_mtx, rna_mtx,
                                     true.multiplet = "doublet",
                                     plot.path = getwd(), plot.name = 'benchmark_demuxmix_full_', width = 3.5, height = 2.5) {
     start_time <- Sys.time()
-    dmm <- demuxmix(as.matrix(t(tag_mtx)), rna = colSums(rna_mtx > 0))
+    dmm <- demuxmix(as.matrix(t(tag_mtx)), rna = Matrix::colSums(rna_mtx > 0))
     classLabels <- dmmClassify(dmm)
     classLabels$assign <- classLabels$HTO
     classLabels$assign[classLabels$Type != 'singlet'] <- classLabels$Type[classLabels$Type != 'singlet']
