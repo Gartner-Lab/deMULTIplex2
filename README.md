@@ -1,7 +1,6 @@
 # deMULTIplex2
 
 ## Installation
-macOS: Install Xquartz (https://www.xquartz.org/) first.
 
 ```
 install.packages("devtools") 
@@ -68,6 +67,10 @@ tagHist(tag_mtx,
 tagHeatmap(tag_mtx,
            res$final_assign)
 ```
+
+## Troubleshooting
+
+* Installation failed on macOS - You may need to install Xquartz (https://www.xquartz.org/) first.
 
 ## Cite deMULTIplex2
 
