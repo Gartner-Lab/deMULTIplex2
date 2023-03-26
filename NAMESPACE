@@ -22,12 +22,8 @@ export(gg_color_hue2)
 export(leiden_clus)
 export(numeric_color_opt)
 export(numeric_rgb_range)
-<<<<<<< HEAD
 export(prob_to_mean_roc)
-export(readTag)
-=======
 export(readTags)
->>>>>>> 17d55afa881fdf7b581f965e9d8e825bbdd89aff
 export(read_excel_allsheets)
 export(revComplement)
 export(roc_stats)
