@@ -9,8 +9,8 @@ devtools::install_github("Gartner-Lab/deMULTIplex2") # install
 library(deMULTIplex2) 
 ```
 
-## Starting with count matrix
-Must have a count matrix where rows are individual cells and columns represent unique sample tags
+## Starting with tag count matrix
+Must have a count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`.
 
 ```
 res <- demultiplexTags(tag_mtx,
@@ -68,3 +68,14 @@ tagHist(tag_mtx,
 tagHeatmap(tag_mtx,
            res$final_assign)
 ```
+
+## Cite deMULTIplex2
+
+To be added.
+
+## References
+
+1. Stoeckius, M., Zheng, S., Houck-Loomis, B., Hao, S., Yeung, B. Z., Mauck, W. M., Smibert, P., & Satija, R. (2018). Cell Hashing with barcoded antibodies enables multiplexing and doublet detection for single cell genomics. Genome biology, 19(1), 1-12. 
+
+
+

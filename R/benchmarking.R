@@ -21,11 +21,12 @@ confusion_stats <- function(call_label, true_label,
         tp <- sum(call_label %in% tag_mapping$tag[tag_mapping$true_label == tb] & true_label %in% tag_mapping$true_label[tag_mapping$true_label == tb], na.rm=T)
         fp <- sum(call_label %in% tag_mapping$tag[tag_mapping$true_label == tb], na.rm=T) - tp
         fn <- sum(!call_label %in% tag_mapping$tag[tag_mapping$true_label == tb] & true_label %in% tag_mapping$true_label[tag_mapping$true_label == tb], na.rm=T) # Note when multiple-to-one mapping exists this code does not work
+        tn <- sum(!call_label %in% tag_mapping$tag[tag_mapping$true_label == tb] & !true_label %in% tag_mapping$true_label[tag_mapping$true_label == tb], na.rm=T)
         precision = tp/(tp+fp); if(is.na(precision)) precision = 0
         recall = tp/(tp+fn); if(is.na(recall)) recall = 0
         f_score <- tp / (tp + 0.5 * (fp + fn)); if(is.na(f_score)) f_score = 0
         tag_stats[[tb]] <- c(
-            tp = tp, fp=fp, fn=fn,
+            tp = tp, fp=fp, fn=fn,tn=tn,
             precision=precision,
             recall=recall,
             f_score=f_score
@@ -257,6 +258,47 @@ benchmark_demuxmix_naive <- function(tag_mtx,
     return(
         c(list(call=call_demuxmixNaive), conf_stats, time = use_time)
     )
+}
+
+
+
+
+
+#' @export
+roc_stats <- function(tl, prob, cuts = seq(0, 1, .01)) {
+    t(sapply(cuts, function(x) {
+        pred_bin <- prob > x
+        tpr <- sum(pred_bin & tl, na.rm=T) / sum(tl, na.rm=T)
+        fpr <- sum(pred_bin & !tl, na.rm=T) / sum(!tl, na.rm=T)
+        c(tpr = tpr, fpr = fpr)
+    }))
+}
+
+#' @export
+prob_to_mean_roc <- function(prob_mtx, true_label, cuts = seq(0, 1, .01)) {
+    roc_res <- lapply(colnames(prob_mtx), function(bc) {
+        true_label_bin <- true_label==bc
+        as.data.frame(roc_stats(true_label_bin, prob_mtx[,bc]))
+    })
+    names(roc_res) <- colnames(prob_mtx)
+    tpr_mtx <- sapply(roc_res, function(bc) {
+        bc$tpr
+    })
+    fpr_mtx <- sapply(roc_res, function(bc) {
+        bc$fpr
+    })
+    return(
+        data.frame(
+            mean_fpr = rowMeans(fpr_mtx),
+            mean_tpr = rowMeans(tpr_mtx)
+        )
+    )
+}
+
+#' @export
+compute_auc <- function(x, y) {
+    id = order(x)
+    pracma::trapz(x[id],y[id])
 }
 
 
