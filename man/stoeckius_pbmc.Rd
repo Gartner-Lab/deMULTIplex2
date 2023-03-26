@@ -5,20 +5,18 @@
 \alias{stoeckius_pbmc}
 \title{Tag count matrix of 8-donor dataset from Stoeckius et al.}
 \format{
-An object of class \code{"matrix"};
+An object of class \code{"matrix"}
 }
 \usage{
 data(stoeckius_pbmc)
 }
 \description{
-Data from Stoeckius et al., 2018
-Tag count matrix of PBMC from 8 donors.
+Tag count matrix of PBMC from 8 donors from Stoeckius et al., 2018
 }
 \examples{
 data(stoeckius_pbmc)
 }
 \references{
 Stoeckius et al., Genome biology. 2018 Dec;19(1):1-2.
-(\href{https://genomebiology.biomedcentral.com/articles/10.1186/s13059-018-1603-1#Ack1}{Link})
 }
 \keyword{datasets}

@@ -1,8 +1,5 @@
 
 
-################
-### readTags ###
-################
 #' Preprocess Tag Reads
 #'
 #' Loads the FASTQ files produced by sequencing MULTIseq or MULTI-ATAC barcode libraries. \cr
