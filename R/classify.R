@@ -1,23 +1,60 @@
 
 
-# Description:
-# The new demultiplex function
+#' Demultiplex tag count matrix
+#'
+#' Demultiplex tag count matrix to assign each cell the most probable sample identity using the deMULTIplex2 algorithm.
+#' deMULTIplex2 is built on a statistical model of tag read counts derived from the physical mechanism of tag cross-contamination.
+#' It uses generalized linear models and expectation-maximization to probabilistically infer the sample identity of each cell.
+#'
+#' @param tag_mtx (required) The tag UMI count matrix with each row representing a cell and each column representing a tag. Pre-filtering to remove empty droplets are recommended.
+#' @param init.cos.cut Cosine cutoff to initialize the EM algorithm. If input is a single value, same cosine cutoff will be applied to all tags (recommended).
+#' If input is a vector, must be the same length as the number of tags. EM will be initialized with the specified cosine cutoff for each tag.
+#' @param max.iter Maximum number of EM iterations. For most datasets the default value should suffice.
+#' @param converge.threshold If consecutive absolute difference in the expected value of the log likelihood (Q function) is below this value, the algorithm is fully converged.
+#' In practice, parameter estimation will stabilize in a few iterations even with down-sampled cells, so Q difference not reaching this threshold is generally fine.
+#' @param prob.cut Cutoff of posterior probability to determine if a cell is positive or negative with each tag. Default value (0.5) is recommended.
+#' @param min.cell.fit If a tag has too few positive cells, a GLM model cannot be robustly fit.
+#' Therefore, tags with positive cells less than this specified amount will not be processed.
+#' @param max.cell.fit Robust estimation of GLM generally does not require using all cells. For large datasets,
+#' deMULTIplex2 downsample the positive cells and negative cells to the amount specified by this parameter to speed up processing.
+#' @param min.quantile.fit If a cell has total tag count below this quantile, it will be excluded from fitting for robustness.
+#' @param max.quantile.fit If a cell has total tag count above this quantile, it will be excluded from fitting for robustness.
+#' @param residual.type Report which type of residual and use which residual for computing UMAP. "`rqr`": Randomized Quantile Residual. "`pearson`": Pearson residual.
+#' @param plot.umap Compute and plot UMAP with residual ("`residual`"), raw umi count ("`umi`") or do not output UMAP summary plots ("`none`").
+#' @param plot.diagnostics Whether to plot diagnostic plots.
+#' @param plot.path Path to output the plots.
+#' @param plot.name Text string to append to the output file name.
+#' @param umap.nn corresponds to the `n_neighbors` parameter in the `umap` function in the `uwot` package.
+#' @param seed Random seed for reproducibility.
+#' @param point.size Size of point in the summary and diagnostic plots.
+#' @param label.size Label size in the summary plot.
+#' @param min.tag.show Tags with positive cells below this threshold will not be labeled on the summary plot.
+#' @return A list containing the assignment results.
+#' @references To be added.
+#'
+#' @examples
+#' res <- demultiplexTags(tag_mtx,
+#'                        plot.path = "~/",
+#'                        plot.name = "test",
+#'                        plot.diagnostics = FALSE)
+#' table(res$final_assign)
+#'
 #' @importFrom Matrix Matrix rowSums
 #' @importFrom MASS glm.nb
 #' @importFrom ggrastr geom_point_rast
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom magrittr %>%
 #' @export
-demultiplexTags <- function(bc_mtx,
+demultiplexTags <- function(tag_mtx,
                             init.cos.cut = 0.5,
-                            converge.threshold = 1e-3,
                             max.iter = 30,
+                            converge.threshold = 1e-3,
                             prob.cut = 0.5,
                             min.cell.fit = 10,
                             max.cell.fit = 1e4,
                             min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
                             max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
-                            residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
+                            residual.type = c("rqr", 'pearson'),
                             plot.umap = c("residual", "umi", "none"),
                             plot.diagnostics = F,
                             plot.path = getwd(),
@@ -26,7 +63,7 @@ demultiplexTags <- function(bc_mtx,
                             seed = 1,
                             point.size = 1,
                             label.size = 3,
-                            min.bc.show = 50) {
+                            min.tag.show = 50) {
     set.seed(seed)
     # TODO: Need to handle cells if rowSums = 0
     ## evaluate choices
@@ -37,30 +74,30 @@ demultiplexTags <- function(bc_mtx,
         cat("Warning: setting init.cos.cut less than 0.5 is not recommended.", fill=T)
     }
 
-    zero_bc_cells = rowSums(bc_mtx) == 0
+    zero_bc_cells = rowSums(tag_mtx) == 0
     if (sum(zero_bc_cells) > 0) {
         message(paste0("Detected ", sum(zero_bc_cells), " cells with 0 barcode count. These cells will not be classified."))
-        bc_mtx = bc_mtx[!zero_bc_cells,]
+        tag_mtx = tag_mtx[!zero_bc_cells,]
     }
 
-    barcodes <- colnames(bc_mtx)
+    barcodes <- colnames(tag_mtx)
     # Calculate cosine similarity matrix
-    bc_mtx <- Matrix(as.matrix(bc_mtx), sparse = T)
-    vec_norm2 <- apply(bc_mtx, 1, function(x) norm(x, type = "2")) # for each cell, calculate its L2 norm (Euclidean distance from origin)
-    cos.umi_mtx <- bc_mtx / vec_norm2 # divide matrix by L2 norms to get cosine distances
+    tag_mtx <- Matrix(as.matrix(tag_mtx), sparse = T)
+    vec_norm2 <- apply(tag_mtx, 1, function(x) norm(x, type = "2")) # for each cell, calculate its L2 norm (Euclidean distance from origin)
+    cos.umi_mtx <- tag_mtx / vec_norm2 # divide matrix by L2 norms to get cosine distances
 
-    pr_mtx <- matrix(nrow = nrow(bc_mtx), ncol = ncol(bc_mtx), data = NA)
-    rownames(pr_mtx) <- rownames(bc_mtx)
-    colnames(pr_mtx) <- colnames(bc_mtx)
+    pr_mtx <- matrix(nrow = nrow(tag_mtx), ncol = ncol(tag_mtx), data = NA)
+    rownames(pr_mtx) <- rownames(tag_mtx)
+    colnames(pr_mtx) <- colnames(tag_mtx)
     rqr_mtx <- pr_mtx
     prob_mtx <- pr_mtx
 
     coef_list <- list()
     df_list<-list()
     for(bc in barcodes) {
-        df <- data.frame(bc.umi = bc_mtx[, bc],
+        df <- data.frame(bc.umi = tag_mtx[, bc],
                          cos.umi = cos.umi_mtx[,bc])
-        df$tt.umi <- rowSums(bc_mtx)
+        df$tt.umi <- rowSums(tag_mtx)
 
         cat("Running EM for ", bc, sep = "", fill = T)
         if(length(init.cos.cut) > 1) cos.cut = init.cos.cut[which(barcodes == bc)] else cos.cut = init.cos.cut
@@ -108,7 +145,7 @@ demultiplexTags <- function(bc_mtx,
 
     # UMAP Plotting Options
     if (plot.umap == "umi") { # Raw UMI Counts
-        umap_res <- compute_umap(bc_mtx, use_dim = ncol(bc_mtx), n_component=2, n_neighbors = umap.nn)
+        umap_res <- compute_umap(tag_mtx, use_dim = ncol(tag_mtx), n_component=2, n_neighbors = umap.nn)
     } else if (plot.umap == "residual") { # Pearson Residuals
         umap_res <- compute_umap(res_mtx, use_dim = ncol(res_mtx), n_component=2, n_neighbors = umap.nn)
     } else {
@@ -124,18 +161,18 @@ demultiplexTags <- function(bc_mtx,
         umap_df$barcode_count[umap_df$barcode_count >= 3] = ">=3"
         umap_df$barcode_count <- factor(umap_df$barcode_count, c("0", "1", "2" ,">=3"))
 
-        glist[["summary"]] <- plotSummary(umap_df, point.size = point.size, label.size = label.size, min.bc.show = min.bc.show)
+        glist[["summary"]] <- plotSummary(umap_df, point.size = point.size, label.size = label.size, min.tag.show = min.tag.show)
     }
 
     # DEBUG
     # if(1) {
     #     bc == barcodes[1]
     #     df <- data.frame(
-    #         bc.umi = bc_mtx[, bc],
+    #         bc.umi = tag_mtx[, bc],
     #         res = res_mtx[,bc],
     #         cos.umi = cos.umi_mtx[,bc],
     #         cos.res = cos.res_mtx[,bc])
-    #     df$tt.umi <- rowSums(bc_mtx)
+    #     df$tt.umi <- rowSums(tag_mtx)
     #     df <- cbind(df, umap_df)
     #     df$is_negcell = 1:nrow(df) %in% neg_cell_list[[bc]]
     #     assign("df",df, env = .GlobalEnv)
@@ -146,11 +183,11 @@ demultiplexTags <- function(bc_mtx,
         if(plot.umap=="none") stop("Please specify plot.umap.")
         for (bc in barcodes) {
             df <- data.frame(
-                bc.umi = bc_mtx[, bc],
+                bc.umi = tag_mtx[, bc],
                 res = res_mtx[,bc],
                 cos.umi = cos.umi_mtx[,bc],
                 prob.pos = prob_mtx[,bc])
-            df$tt.umi <- rowSums(bc_mtx)
+            df$tt.umi <- rowSums(tag_mtx)
             df <- cbind(df, umap_df)
             mappings <- list(
                 c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
@@ -235,7 +272,7 @@ rqr.nb <- function (df, y, fit = "fit", model)
 }
 
 
-plotSummary <- function(df, point.size = 1, label.size = 3 , min.bc.show = 50) {
+plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) {
     unq_bcs = unique(df$barcode_assign)
     unq_bcs = unq_bcs[!is.na(unq_bcs)]
     use_color = get_factor_color(unq_bcs, "Set1")
@@ -248,7 +285,7 @@ plotSummary <- function(df, point.size = 1, label.size = 3 , min.bc.show = 50) {
         theme_bw() +
         ggtitle("barcode_assign") +
         guides(color = "none")
-    show_bc = names(which(table(df[["barcode_assign"]]) > min.bc.show))
+    show_bc = names(which(table(df[["barcode_assign"]]) > min.tag.show))
     label_data <- df %>% group_by_at("barcode_assign") %>% summarize_at(c("UMAP_1", "UMAP_2"), median)
     label_data <- label_data[label_data[["barcode_assign"]] %in% show_bc,,drop=F]
     g1 <- g1 + geom_text(
