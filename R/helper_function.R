@@ -1,4 +1,10 @@
 
+
+#' @export
+tags <- readxl::read_excel("data-raw/MULTI-seq_oligos_Nov2019.xlsx")$`Barcode Sequence`
+names(tags) <- readxl::read_excel("data-raw/MULTI-seq_oligos_Nov2019.xlsx")$`Well Position`
+
+
 #' @export
 '%ni%' <- Negate('%in%')
 
