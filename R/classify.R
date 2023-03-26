@@ -8,25 +8,25 @@
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom magrittr %>%
 #' @export
-demutiplexTags <- function(bc_mtx,
-                          init.cos.cut = 0.5,
-                          converge.threshold = 1e-3,
-                          max.iter = 30,
-                          prob.cut = 0.5,
-                          min.cell.fit = 10,
-                          max.cell.fit = 1e4,
-                          min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
-                          max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
-                          residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
-                          plot.umap = c("residual", "umi", "none"),
-                          plot.diagnostics = F,
-                          plot.path = getwd(),
-                          plot.name = "",
-                          umap.nn = 30L,
-                          seed = 1,
-                          point.size = 1,
-                          label.size = 3,
-                          min.bc.show = 50) {
+demultiplexTags <- function(bc_mtx,
+                            init.cos.cut = 0.5,
+                            converge.threshold = 1e-3,
+                            max.iter = 30,
+                            prob.cut = 0.5,
+                            min.cell.fit = 10,
+                            max.cell.fit = 1e4,
+                            min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
+                            max.quantile.fit = 0.95, # Remove cells with total umi greater than the specified quantile, which could be multiplets
+                            residual.type = c("rqr", 'pearson'), # ONLY use RQR for future
+                            plot.umap = c("residual", "umi", "none"),
+                            plot.diagnostics = F,
+                            plot.path = getwd(),
+                            plot.name = "",
+                            umap.nn = 30L,
+                            seed = 1,
+                            point.size = 1,
+                            label.size = 3,
+                            min.bc.show = 50) {
     set.seed(seed)
     # TODO: Need to handle cells if rowSums = 0
     ## evaluate choices
@@ -97,8 +97,14 @@ demutiplexTags <- function(bc_mtx,
         if (sum(x) == 1) colnames(call_mtx)[which(x)] else NA
     })
 
-    assign_table = data.frame(barcode_assign = barcode_assign, barcode_count = barcode_count,
+    assign_table = data.frame(barcode_assign = barcode_assign,
+                              barcode_count = barcode_count,
                               droplet_type = ifelse(barcode_count == 1, 'singlet', ifelse(barcode_count == 0, 'negative', 'multiplet')))
+    assign_table$final_assign <- assign_table$barcode_assign
+    assign_table$final_assign[is.na(assign_table$final_assign)] <- assign_table$droplet_type[is.na(assign_table$final_assign)]
+
+    final_assign <- setNames(assign_table[, "final_assign"], rownames(assign_table))
+
 
     # UMAP Plotting Options
     if (plot.umap == "umi") { # Raw UMI Counts
@@ -181,6 +187,7 @@ demutiplexTags <- function(bc_mtx,
 
     return(
         list(
+            final_assign = final_assign,
             assign_table = assign_table,
             umap = umap_res %>% as.matrix(),
             res_mtx = res_mtx %>% as.matrix(),

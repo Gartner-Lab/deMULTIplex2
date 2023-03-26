@@ -1,59 +1,15 @@
 
 
-#####################
-### revComplement ###
-#####################
-#' Generate Reverse Complement Sequence
-#'
-#' Takes cell barcodes formatted by Cell Ranger and/or ArchR and returns reverse complement of each cell barcode sequence.
-#' Depending on sequencer used, this may be needed to properly align cell barcodes.
-#'
-#' @param cells A character vector of cell barcodes (may include )
-#' @param cbLength Length of cell barcode (default: 16)
-#' @param keepFormat Whether or not to keep non-barcode formatting characters (e.g. "AGTCAGTCAGTCAGTC-1" or "Sample#AGTCAGTCAGTCAGTC")
-#'
-#' @return A character vector
-#'
-#' @export
-revComplement <- function(cells,
-                          cbLength = 16,
-                          keepFormat = F) {
-    require(Biostrings)
-    require(stringr)
-
-    pattern <- paste("[(A,G,T,C,N)]{", cbLength, "}", sep = "")
-
-    if (keepFormat) {
-        cells_tmp <- paste("x",cells,"x", sep = "")
-        format <- str_split(cells_tmp, pattern, simplify = T)
-        format <- t(apply(format, 1, function(x) {
-            tmp <- x
-            str_sub(tmp[1], 1, 1) <- ""
-            str_sub(tmp[2], -1, -1) <- ""
-            tmp
-        }))
-    }
-
-    cells <- str_extract(cells, pattern)
-
-    res <- as.character(reverseComplement(DNAStringSet(cells)))
-
-    if (keepFormat) {
-        res <- paste(format[,1], res, format[,2], sep = "")
-    }
-    return(res)
-}
-
-###############
-### readTag ###
-###############
+################
+### readTags ###
+################
 #' Preprocess Tag Reads
 #'
-#' Locates and reads into memory FASTQ files produced by sequencing MULTIseq or MULTI-ATAC barcode libraries.
-#' Read pairs are parsed to extract 10X cell barcodes, MULTI* sample barcodes, and UMIs to count barcodes captured, and these are assembled into a read table.
-#' Read table can be optionally filtered by a set of known cell barcodes (i.e. cells identified by Cell Ranger).
-#' This function is memory intensive for large FASTQ files.
-#' Updated version of MULTIseq.preprocess() from original deMULTIplex package.
+#' Loads the FASTQ files produced by sequencing MULTIseq or MULTI-ATAC barcode libraries. \cr
+#' Read pairs are parsed to extract 10X cell barcodes, MULTI* sample tags, and UMIs, and these are assembled into a read table. \cr
+#' Read table can be optionally filtered by a set of known cell barcodes (i.e. cells identified by Cell Ranger). \cr
+#' Warning: This function is memory intensive for large FASTQ files. \cr
+#' Note: This is an updated version of MULTIseq.preprocess() from original deMULTIplex package.
 #'
 #' @param dir Path to directory containing tag FASTQ files
 #' @param name Prefix of FASTQ files for the tag library to be processed
@@ -73,20 +29,20 @@ revComplement <- function(cells,
 #' | Exp2MULTI_S3_L002_R1_001.fastq.gz
 #' | Exp2MULTI_S3_L002_R2_001.fastq.gz
 #'
-#' read_table <- readTag(dir = "~/Experiment2",
-#'                       name = "Exp2MULTI",
-#'                       barcode.type = "MULTIseq",
-#'                       assay = "RNA",
-#'                       filter.cells = exp2_cells)
+#' read_table <- readTags(dir = "~/Experiment2",
+#'                        name = "Exp2MULTI",
+#'                        barcode.type = "MULTIseq",
+#'                        assay = "RNA",
+#'                        filter.cells = exp2_cells)
 #'
 #' @export
-readTag <- function(dir,
-                    name,
-                    barcode.type = c("MULTIseq", "MULTI-ATAC"),
-                    assay = c("RNA", "ATAC", "Multiome"),
-                    filter.cells = NULL,
-                    fastq.A = NA, fastq.B = NA,
-                    pos.cbc, pos.sbc, pos.umi) {
+readTags <- function(dir,
+                     name,
+                     barcode.type = c("MULTIseq", "MULTI-ATAC"),
+                     assay = c("RNA", "ATAC", "Multiome"),
+                     filter.cells = NULL,
+                     fastq.A = NA, fastq.B = NA,
+                     pos.cbc, pos.sbc, pos.umi) {
 
     t0 <- Sys.time()
     barcode.type <- match.arg(barcode.type)
@@ -198,16 +154,17 @@ readTag <- function(dir,
 }
 
 
-##############
-## alignTag ##
-##############
-#' Generate cell x tag count matrix
-#' Utilizes data.table library to quickly tally total UMI counts of each sample barcode per cell in read table
+###############
+## alignTags ##
+###############
+#' Generate cell x tag count matrix from read table
+#'
+#' Tally total UMI counts of each sample barcode per cell in read table to produce a tag count matrix.
 #' Updated version of MULTIseq.align() from original deMULTIplex package.
 #'
-#' @param read_table Data.frame containing variables "Cell", "UMI", and "Sample" as output by readTag() function
+#' @param read_table Data.frame containing variables "Cell", "UMI", and "Sample" as output by readTags() function
 #' @param tag.ref Character vector of sample tag sequences used in experiment
-#' @param filter.cells Optional: a character vector of cell barcodes to filter the read table by. Redundant if already filtered with readTag() (default: NULL)
+#' @param filter.cells Optional: a character vector of cell barcodes to filter the read table by. Redundant if already filtered with readTags() (default: NULL)
 #' @param string.dist.method Specify method for calculating string distance between reference tags and tag reads when correcting for sequencing errors. See ?stringdist for options (default: hamming)
 #' @param max.dist Specify maximum string distance allowed for correcting sequencing errors in sample tags (default: 1)
 #'
@@ -220,16 +177,16 @@ readTag <- function(dir,
 #' TCTGAGCCTAAACTGA CAAAGAGG CCACAATG
 #' TTCTAGACTGAATTGA GATACGCA TGAGACCT
 #'
-#' tag_mtx <- alignTag(read_table,
-#'                     tag.ref,
-#'                     filter.cells = exp2_cells)
+#' tag_mtx <- alignTags(read_table,
+#'                      tag.ref,
+#'                      filter.cells = exp2_cells)
 #'
 #' @export
-alignTag <- function(read_table,
-                     tag.ref,
-                     filter.cells = NULL,
-                     string.dist.method = "hamming",
-                     max.dist = 1) {
+alignTags <- function(read_table,
+                      tag.ref,
+                      filter.cells = NULL,
+                      string.dist.method = "hamming",
+                      max.dist = 1) {
     t0 <- Sys.time()
     string.dist.method <- match.arg(string.dist.method)
     if (is.null(filter.cells)) {
@@ -270,7 +227,49 @@ alignTag <- function(read_table,
 }
 
 
+#####################
+### revComplement ###
+#####################
+#' Generate Reverse Complement Sequence
+#'
+#' Takes cell barcodes formatted by Cell Ranger and/or ArchR and returns reverse complement of each cell barcode sequence.
+#' Depending on sequencer used, this may be needed to properly align cell barcodes.
+#'
+#' @param cells A character vector of cell barcodes (may include non-barcode formatting characters)
+#' @param cbLength Length of cell barcode (default: 16)
+#' @param keepFormat Whether or not to keep non-barcode formatting characters (e.g. "AGTCAGTCAGTCAGTC-1" or "Sample#AGTCAGTCAGTCAGTC")
+#'
+#' @return A character vector
+#'
+#' @export
+revComplement <- function(cells,
+                          cbLength = 16,
+                          keepFormat = FALSE) {
+    require(Biostrings)
+    require(stringr)
 
+    pattern <- paste("[(A,G,T,C,N)]{", cbLength, "}", sep = "")
+
+    if (keepFormat) {
+        cells_tmp <- paste("x",cells,"x", sep = "")
+        format <- str_split(cells_tmp, pattern, simplify = T)
+        format <- t(apply(format, 1, function(x) {
+            tmp <- x
+            str_sub(tmp[1], 1, 1) <- ""
+            str_sub(tmp[2], -1, -1) <- ""
+            tmp
+        }))
+    }
+
+    cells <- str_extract(cells, pattern)
+
+    res <- as.character(reverseComplement(DNAStringSet(cells)))
+
+    if (keepFormat) {
+        res <- paste(format[,1], res, format[,2], sep = "")
+    }
+    return(res)
+}
 
 
 
