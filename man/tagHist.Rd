@@ -11,7 +11,7 @@ tagHist(
   minUMI = 10,
   plotnUMI = TRUE,
   select = NULL,
-  scale_y = FALSE,
+  scale_y_sqrt = FALSE,
   bins = 100,
   colors = NULL
 )
@@ -25,7 +25,7 @@ tagHist(
 
 \item{select}{Numeric vector identifying specific barcodes (columns of tag_mtx) to plot}
 
-\item{scale_y}{logical; Whether or not to square-root-scale the y-axis to improve visualization (default: FALSE)}
+\item{scale_y_sqrt}{logical; Whether or not to square-root-scale the y-axis to improve visualization (default: FALSE)}
 
 \item{bins}{Number of bins passed on to geom_histogram() (default: 100)}
 

@@ -9,17 +9,18 @@
 #' @param minUMI Exclude cells from plotting that do not have this minimum number of total tag UMIs (default: 10)
 #' @param plotnUMI logical; Whether or not to plot log-scaled nUMI as well (default: TRUE)
 #' @param select Numeric vector identifying specific barcodes (columns of tag_mtx) to plot
-#' @param scale_y logical; Whether or not to square-root-scale the y-axis to improve visualization (default: FALSE)
+#' @param scale_y_sqrt logical; Whether or not to square-root-scale the y-axis to improve visualization (default: FALSE)
 #' @param bins Number of bins passed on to geom_histogram() (default: 100)
 #' @param colors Values passed on scale_fill_manual() if desired
 #'
 #' @importFrom tidyr pivot_longer
+#' @importFrom ggplot2 ggplot aes aes_string scale_color_manual scale_color_gradientn geom_histogram scale_x_log10 theme_bw ggtitle theme element_text facet_wrap facet_grid scale_y_sqrt scale_fill_manual
 #' @export
 tagHist <- function(tag_mtx,
                     minUMI = 10,
                     plotnUMI = TRUE,
                     select = NULL,
-                    scale_y = FALSE,
+                    scale_y_sqrt = FALSE,
                     bins = 100,
                     colors = NULL) {
 
@@ -62,7 +63,7 @@ tagHist <- function(tag_mtx,
         p <- p + facet_grid(rows = "Barcode", scales = "free_y")
     }
 
-    if (scale_y) { p <- p + scale_y_sqrt() }
+    if (scale_y_sqrt) { p <- p + scale_y_sqrt() }
     if (!is.null(colors)) { p <- p + scale_fill_manual(values = colors) }
 
     p
@@ -81,6 +82,7 @@ tagHist <- function(tag_mtx,
 #' @param colHigh Color representing the maximum value of the heatmap
 #'
 #' @importFrom tidyr pivot_longer
+#' @importFrom ggplot2 ggplot aes aes_string theme scale_fill_gradient geom_tile geom_text theme_classic element_text
 #' @export
 tagCallHeatmap <- function(tag_mtx,
                        calls,

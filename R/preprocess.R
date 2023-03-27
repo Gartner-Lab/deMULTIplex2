@@ -32,7 +32,8 @@
 #'                        assay = "RNA",
 #'                        filter.cells = exp2_cells)
 #' @importFrom stringdist stringdist
-#' @importFrom ShortRead readFastq
+#' @importFrom ShortRead readFastq sread
+#' @importFrom XVector subseq
 #' @export
 readTags <- function(dir,
                      name,
@@ -180,6 +181,7 @@ readTags <- function(dir,
 #'                      filter.cells = exp2_cells)
 #'
 #' @importFrom data.table data.table
+#' @importFrom Matrix sparseMatrix
 #' @export
 alignTags <- function(read_table,
                       tag.ref,
@@ -208,7 +210,7 @@ alignTags <- function(read_table,
     cat("Assembling tag count table...", fill = T)
     dt <- data.table(read_table[,c("Cell", "Sample")])
     dt <- dt[complete.cases(dt), ]
-    assign("dt", dt, env = .GlobalEnv)
+    #assign("dt", dt, env = .GlobalEnv)
     cnt_ind <- dt[, list(Freq =.N), by=list(Cell,Sample)]
     cnt_ind$i <- (1:length(cells))[match(cnt_ind$Cell, cells)] # NA?
     cnt_ind$j <- (1:length(tag.ref))[match(cnt_ind$Sample, tag.ref)]

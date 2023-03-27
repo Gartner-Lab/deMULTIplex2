@@ -197,15 +197,15 @@ demultiplexTags <- function(tag_mtx,
             df$tt.umi <- rowSums(tag_mtx)
             df <- cbind(df, umap_df)
             mappings <- list(
-                c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
+                c("log(bc.umi)", "cos.umi", "cos.umi"),
                 c("log(tt.umi)", "log(bc.umi)", "prob.pos"),
                 c("log(tt.umi)", "log(tt.umi-bc.umi)", "prob.pos"),
-                #c("log(bc.umi)", "cos.umi", "cos.umi"),
-                c("log(bc.umi)", "cos.umi", "prob.pos"),
                 c("log(tt.umi)", "res", "prob.pos"),
+                #c("qq"),
+                #c("log(tt.umi)", "log(bc.umi)", "cos.umi"),
+                #c("log(bc.umi)", "cos.umi", "prob.pos"),
                 #c("log(tt.umi)", "cos.umi", "cos.umi"),
                 #c("log(tt.umi)", "res", "cos.umi"),
-                c("qq"),
                 #c("log(res)", "res", "cos.res"),
                 #c("log(res)", "cos.res", "cos.res"),
                 #c("UMAP_1", "UMAP_2", "res"),
@@ -220,7 +220,7 @@ demultiplexTags <- function(tag_mtx,
 
     time <- (Sys.time() %>% make.names() %>% strsplit(split = "X") %>% unlist())[2]
     if(length(glist)) {
-        pdf(paste0(plot.path, "/", plot.name, "_", time, "_assignment.pdf"), width = 20, height = 15)
+        pdf(paste0(plot.path, "/", plot.name, "_", time, "_assignment.pdf"), width = 15, height = 8)
         for(i in 1:length(glist)) {
             grid.newpage()
             message(paste0("Plotting ", names(glist)[i]))
@@ -281,6 +281,7 @@ rqr.nb <- function (df, y, fit = "fit", model)
 #' @importFrom magrittr %>%
 #' @importFrom dplyr summarize_at group_by_at
 #' @importFrom gridExtra arrangeGrob
+#' @importFrom ggplot2 ggplot aes aes_string scale_color_manual theme_bw ggtitle guides geom_text
 plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) {
     unq_bcs = unique(df$barcode_assign)
     unq_bcs = unq_bcs[!is.na(unq_bcs)]
@@ -320,6 +321,7 @@ plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) 
 #' @importFrom ggrastr geom_point_rast
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom ggExtra ggMarginal
+#' @importFrom ggplot2 ggplot aes aes_string scale_color_manual scale_color_gradientn theme_bw ggtitle guides geom_text stat_qq stat_qq_line xlab ylab geom_abline theme_classic labs
 plot.all.diagnostics <- function(df, mappings, bc, prob.cut = 0.5, point.size = 1, ncol = 3) {
     plot_list <- list()
     for(i in 1:length(mappings)){
