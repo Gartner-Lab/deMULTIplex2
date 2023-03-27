@@ -71,6 +71,14 @@ deMULTIplex2 downsample the positive cells and negative cells to the amount spec
 }
 \value{
 A list containing the assignment results.
+\code{final_assign} is the final assignment in a single character vector.
+\code{assign_table} stores the detailed assignment result, including the assigned tag for singlets, the total positive tag count of each cell,
+and whether a cell is a singlet, a multiplet or is not tagged.
+\code{umap} is the umap coordinates.
+\code{res_mtx} is the residual matrix.
+\code{prob_mtx} is the posterior probability of each cell being positively tagged by each tag.
+\code{coefs} is the parameter estimates of the GLM models.
+\code{df_list} is a list of data frames for each tag containing stats from the final iteration of EM.
 }
 \description{
 Demultiplex tag count matrix to assign each cell the most probable sample identity using the deMULTIplex2 algorithm.

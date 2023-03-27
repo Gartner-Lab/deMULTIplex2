@@ -86,6 +86,7 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
 }
 
 
+#' @importFrom ggrastr geom_point_rast
 plot.em.diagnostics <- function(df) {
     g1 <- ggplot(df, aes_string(color = "prob0")) +
         geom_point_rast(aes_string("log(tt.umi)", "log(bc.umi)"), size = 1, stroke = 0) +
@@ -154,6 +155,7 @@ e.step <- function(df, fit0, fit1, pi.vector, plot = FALSE) {
 }
 
 
+#' @importFrom MASS glm.nb
 m.step <- function(df, posterior.prob, mem.init = NULL, min.cell.fit = 10, max.cell.fit = 1e4, min.quantile.fit = .05, max.quantile.fit = .95) {
     if(!is.null(mem.init)) {
         df$mem.iter = mem.init

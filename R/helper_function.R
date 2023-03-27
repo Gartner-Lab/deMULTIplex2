@@ -44,6 +44,7 @@ numeric_color_opt <- function() {
     return(allowed_pals)
 }
 
+#' @importFrom viridis viridis
 #' @export
 get_gradient_color <- function(palette = NULL, cnum = 100) {
     if(is.null(palette)) stop("please specify a palette")
@@ -133,6 +134,8 @@ get_brewer_set <- function(palette = c("sequential", "diverging", "qualitative")
 
     return(return_palette)
 }
+
+
 
 #' @export
 compute_umap <- function(input_data, use_dim = 50,

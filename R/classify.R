@@ -30,6 +30,14 @@
 #' @param label.size Label size in the summary plot.
 #' @param min.tag.show Tags with positive cells below this threshold will not be labeled on the summary plot.
 #' @return A list containing the assignment results.
+#' `final_assign` is the final assignment in a single character vector.
+#' `assign_table` stores the detailed assignment result, including the assigned tag for singlets, the total positive tag count of each cell,
+#' and whether a cell is a singlet, a multiplet or is not tagged.
+#' `umap` is the umap coordinates.
+#' `res_mtx` is the residual matrix.
+#' `prob_mtx` is the posterior probability of each cell being positively tagged by each tag.
+#' `coefs` is the parameter estimates of the GLM models.
+#' `df_list` is a list of data frames for each tag containing stats from the final iteration of EM.
 #' @references To be added.
 #'
 #' @examples
@@ -40,10 +48,9 @@
 #' table(res$final_assign)
 #'
 #' @importFrom Matrix Matrix rowSums
-#' @importFrom MASS glm.nb
-#' @importFrom ggrastr geom_point_rast
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom magrittr %>%
+#' @importFrom grid grid.draw grid.newpage
 #' @export
 demultiplexTags <- function(tag_mtx,
                             init.cos.cut = 0.5,
@@ -228,8 +235,8 @@ demultiplexTags <- function(tag_mtx,
             assign_table = assign_table,
             umap = umap_res %>% as.matrix(),
             res_mtx = res_mtx %>% as.matrix(),
-            rqr_mtx = rqr_mtx,
-            pr_mtx = pr_mtx,
+            #rqr_mtx = rqr_mtx,
+            #pr_mtx = pr_mtx,
             prob_mtx = prob_mtx,
             coefs = coef_list,
             df_list = df_list
@@ -270,6 +277,10 @@ rqr.nb <- function (df, y, fit = "fit", model)
 }
 
 
+#' @importFrom ggrastr geom_point_rast
+#' @importFrom magrittr %>%
+#' @importFrom dplyr summarize_at group_by_at
+#' @importFrom gridExtra arrangeGrob
 plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) {
     unq_bcs = unique(df$barcode_assign)
     unq_bcs = unq_bcs[!is.na(unq_bcs)]
@@ -306,6 +317,9 @@ plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) 
 }
 
 
+#' @importFrom ggrastr geom_point_rast
+#' @importFrom gridExtra arrangeGrob
+#' @importFrom ggExtra ggMarginal
 plot.all.diagnostics <- function(df, mappings, bc, prob.cut = 0.5, point.size = 1, ncol = 3) {
     plot_list <- list()
     for(i in 1:length(mappings)){

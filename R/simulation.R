@@ -1,5 +1,5 @@
 
-
+# Simulate tag count matrix for benchmarking
 
 #' @export
 simulateTags <- function(n.cell = 1000,
