@@ -67,6 +67,20 @@ tagCallHeatmap(tag_mtx,
 
 * Installation failed on macOS - You may need to install Xquartz (https://www.xquartz.org/) first.
 
+* When seeing following installation error
+
+```
+Configuration failed to find the --static freetype2 library. Try installing:
+ * deb: libfontconfig1-dev (Debian, Ubuntu, etc)
+ * rpm: fontconfig-devel (Fedora, EPEL)
+ * csw: fontconfig_dev (Solaris)
+ * brew: freetype (OSX)
+...
+ERROR: configuration failed for package ‘systemfonts’
+```
+
+Try install `ggrastr` via conda: `conda install -c conda-forge r-ggrastr`, you may also need to install libjpeg: `conda install -c conda-forge libjpeg-turbo` and Cairo: `conda install -c conda-forge r-cairo`. After these are correctly installed, re-run the install command in R.
+
 ## Cite deMULTIplex2
 
 To be added.
