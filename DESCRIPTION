@@ -25,7 +25,8 @@ Imports:
     ShortRead,
     data.table,
     uwot,
-    XVector
+    XVector,
+    devtools
 License: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License
 Encoding: UTF-8
 LazyData: true
