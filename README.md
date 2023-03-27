@@ -9,7 +9,7 @@ library(deMULTIplex2)
 ```
 
 ## Starting with tag count matrix
-Must have a count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`.
+**`demultiplexTags()`** is the core function of deMULTIplex2. User must provide a tag count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`.
 
 ```
 res <- demultiplexTags(tag_mtx,
@@ -17,7 +17,6 @@ res <- demultiplexTags(tag_mtx,
                        plot.name = "test",
                        plot.diagnostics = FALSE)
 table(res$final_assign)
-                      
 ```
 
 ## Starting with raw sequencing data (Illumina FASTQs)
@@ -27,7 +26,7 @@ Make sure you have your barcode library sequenced and the reads saved in FASTQ f
 | Exp2MULTI_S3_L002_R1_001.fastq.gz
 | Exp2MULTI_S3_L002_R2_001.fastq.gz
 ```
-Provide readTags() with the location of the files, the prefix of the FASTQ file names for the library you want to process, and the type of barcode and assay you used. You may also provide a vector of cell barcodes (i.e. from the barcodes.tsv file output by cellranger) to pre-filter your barcode reads.
+Provide **`readTags()`** with the location of the files, the prefix of the FASTQ file names for the library you want to process, and the type of barcode and assay you used. You may also provide a vector of cell barcodes (i.e. from the barcodes.tsv file output by cellranger) to pre-filter your barcode reads.
 ```
 read_table <- readTags(dir = "~/Experiment2",
                        name = "Exp2MULTI",
@@ -36,7 +35,7 @@ read_table <- readTags(dir = "~/Experiment2",
                        filter.cells = exp2_cells)
 ```
 
-Next, alignTags() will take this read table and count the number of UMIs detected per tag, per cell. Sample tag reads are error-corrected by aligning them to a provided vector of tag sequences used in the experiment. You can manually supply these sequences, or they can be subset from the full vector of MULTI-seq barcodes provided with this package. 
+Next, **`alignTags()`** will take this read table and count the number of UMIs detected per tag, per cell. Sample tag reads are error-corrected by aligning them to a provided vector of tag sequences used in the experiment. You can manually supply these sequences, or they can be subset from the full vector of MULTI-seq barcodes provided with this package. 
 
 ```
 data(multiseq_oligos) # Current MULTI-seq oligo sequence provided with the package
