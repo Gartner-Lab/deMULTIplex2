@@ -3,7 +3,8 @@
 ## Installation
 
 ```
-install.packages("devtools") 
+if (!require("devtools", quietly = TRUE))
+    install.packages("devtools") 
 devtools::install_github("Gartner-Lab/deMULTIplex2") # install
 library(deMULTIplex2) 
 ```
