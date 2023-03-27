@@ -30,6 +30,14 @@
 #' @param label.size Label size in the summary plot.
 #' @param min.tag.show Tags with positive cells below this threshold will not be labeled on the summary plot.
 #' @return A list containing the assignment results.
+#' `final_assign` is the final assignment in a single character vector.
+#' `assign_table` stores the detailed assignment result, including the assigned tag for singlets, the total positive tag count of each cell,
+#' and whether a cell is a singlet, a multiplet or is not tagged.
+#' `umap` is the umap coordinates.
+#' `res_mtx` is the residual matrix.
+#' `prob_mtx` is the posterior probability of each cell being positively tagged by each tag.
+#' `coefs` is the parameter estimates of the GLM models.
+#' `df_list` is a list of data frames for each tag containing stats from the final iteration of EM.
 #' @references To be added.
 #'
 #' @examples
@@ -228,8 +236,8 @@ demultiplexTags <- function(tag_mtx,
             assign_table = assign_table,
             umap = umap_res %>% as.matrix(),
             res_mtx = res_mtx %>% as.matrix(),
-            rqr_mtx = rqr_mtx,
-            pr_mtx = pr_mtx,
+            #rqr_mtx = rqr_mtx,
+            #pr_mtx = pr_mtx,
             prob_mtx = prob_mtx,
             coefs = coef_list,
             df_list = df_list
