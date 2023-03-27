@@ -4,9 +4,10 @@
 
 ```
 if (!require("devtools", quietly = TRUE))
-    install.packages("devtools") 
-devtools::install_github("Gartner-Lab/deMULTIplex2") # install
-library(deMULTIplex2) 
+    install.packages("devtools")  # devtools must be correctly installed to install deMULTIplex2 from github source.
+
+devtools::install_github("Gartner-Lab/deMULTIplex2") # install deMULTIplex2
+library(deMULTIplex2) # load deMULTIplex2 into session
 ```
 
 ## Starting with tag count matrix
