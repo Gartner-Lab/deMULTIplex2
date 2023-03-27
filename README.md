@@ -64,7 +64,7 @@ tagHist(tag_mtx,
         minUMI = 10)
 ```
 ```
-tagHeatmap(tag_mtx,
+tagCallHeatmap(tag_mtx,
            res$final_assign)
 ```
 
