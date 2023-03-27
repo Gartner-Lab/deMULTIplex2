@@ -17,6 +17,6 @@ Tag count matrix of PBMC from 8 donors from Stoeckius et al., 2018
 data(stoeckius_pbmc)
 }
 \references{
-Stoeckius et al., Genome biology. 2018 Dec;19(1):1-2.
+Stoeckius et al., Genome biology 19.1 (2018): 1-12.
 }
 \keyword{datasets}

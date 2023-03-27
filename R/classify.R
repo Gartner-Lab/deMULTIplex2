@@ -241,7 +241,6 @@ demultiplexTags <- function(tag_mtx,
 
 
 # Compute rqr for poisson regression, function adapted from qresiduals {statmod}
-#' @export
 rqr.poisson <- function(df, y, fit = "fit") {
     y = df[[y]]
     mu = df[[fit]]
@@ -253,7 +252,6 @@ rqr.poisson <- function(df, y, fit = "fit") {
 
 
 # Compute rqr for negative binomial regression, function adapted from qresiduals {statmod}
-#' @export
 rqr.nb <- function (df, y, fit = "fit", model)
 {
     y = df[[y]]

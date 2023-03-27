@@ -13,11 +13,32 @@
 #'
 #' @keywords datasets
 #'
-#' @references Stoeckius et al., Genome biology. 2018 Dec;19(1):1-2.
+#' @references Stoeckius et al., Genome biology 19.1 (2018): 1-12.
 #'
 #'
 #' @examples
 #' data(stoeckius_pbmc)
 "stoeckius_pbmc"
 
+
+
+
+#' MULTI-seq oligo sequence
+#'
+#' Current version of MULTI-seq oligos. Used as reference for aligning tag fastq files.
+#'
+#' @docType data
+#'
+#' @usage data(multiseq_oligos)
+#'
+#' @format An object of class \code{"character"}
+#'
+#' @keywords datasets
+#'
+#' @references McGinnis, Patterson, et al., Nature methods 16.7 (2019): 619-626.
+#'
+#'
+#' @examples
+#' data(multiseq_oligos)
+"multiseq_oligos"
 

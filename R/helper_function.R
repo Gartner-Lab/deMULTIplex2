@@ -1,9 +1,5 @@
 
 
-#' @export
-tags <- readxl::read_excel("data-raw/MULTI-seq_oligos_Nov2019.xlsx")$`Barcode Sequence`
-names(tags) <- readxl::read_excel("data-raw/MULTI-seq_oligos_Nov2019.xlsx")$`Well Position`
-
 
 #' @export
 '%ni%' <- Negate('%in%')
@@ -40,13 +36,6 @@ gg_color_hue2 <- function(n) {
     hues = seq(15, 375, length = n + 1)
     hcl(h = hues, l = 65, c = 100)[1:n]
 }
-
-#' @export
-floor_dec <- function(x, level=1) round(x - 5*10^(-level-1), level)
-
-#' @export
-ceiling_dec <- function(x, level=1) round(x + 5*10^(-level-1), level)
-
 
 
 #' @export
@@ -173,36 +162,4 @@ compute_umap <- function(input_data, use_dim = 50,
 
 
 
-#' @export
-floor_dec <- function(x, level=1) round(x - 5*10^(-level-1), level)
 
-#' @export
-ceiling_dec <- function(x, level=1) round(x + 5*10^(-level-1), level)
-
-
-#' @export
-read_excel_allsheets <- function(filename, tibble = FALSE) {
-    # I prefer straight data.frames
-    # but if you like tidyverse tibbles (the default with read_excel)
-    # then just pass tibble = TRUE
-    sheets <- readxl::excel_sheets(filename)
-    x <- lapply(sheets, function(X) readxl::read_excel(filename, sheet = X))
-    if(!tibble) x <- lapply(x, as.data.frame)
-    names(x) <- sheets
-    x
-}
-
-
-#' @export
-leiden_clus <- function (embedding, k = 30) {
-    require(RANN)
-    require(leiden)
-    snn <- RANN::nn2(embedding, k=k)$nn.idx
-    adjacency_matrix <- matrix(0L, nrow(embedding), nrow(embedding))
-    rownames(adjacency_matrix) <- colnames(adjacency_matrix) <- rownames(embedding)
-    for(ii in 1:nrow(embedding)) {
-        adjacency_matrix[ii,rownames(embedding)[snn[ii,]]] <- 1L
-    }
-    partition <- leiden(adjacency_matrix)
-    return(partition)
-}
