@@ -48,10 +48,9 @@
 #' table(res$final_assign)
 #'
 #' @importFrom Matrix Matrix rowSums
-#' @importFrom MASS glm.nb
-#' @importFrom ggrastr geom_point_rast
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom magrittr %>%
+#' @importFrom grid grid.draw grid.newpage
 #' @export
 demultiplexTags <- function(tag_mtx,
                             init.cos.cut = 0.5,
@@ -278,6 +277,10 @@ rqr.nb <- function (df, y, fit = "fit", model)
 }
 
 
+#' @importFrom ggrastr geom_point_rast
+#' @importFrom magrittr %>%
+#' @importFrom dplyr summarize_at group_by_at
+#' @importFrom gridExtra arrangeGrob
 plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) {
     unq_bcs = unique(df$barcode_assign)
     unq_bcs = unq_bcs[!is.na(unq_bcs)]
@@ -314,6 +317,9 @@ plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) 
 }
 
 
+#' @importFrom ggrastr geom_point_rast
+#' @importFrom gridExtra arrangeGrob
+#' @importFrom ggExtra ggMarginal
 plot.all.diagnostics <- function(df, mappings, bc, prob.cut = 0.5, point.size = 1, ncol = 3) {
     plot_list <- list()
     for(i in 1:length(mappings)){

@@ -58,5 +58,4 @@ read_table <- readTags(dir = "~/Experiment2",
                        barcode.type = "MULTIseq",
                        assay = "RNA",
                        filter.cells = exp2_cells)
-
 }

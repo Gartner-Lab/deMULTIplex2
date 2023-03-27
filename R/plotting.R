@@ -13,6 +13,7 @@
 #' @param bins Number of bins passed on to geom_histogram() (default: 100)
 #' @param colors Values passed on scale_fill_manual() if desired
 #'
+#' @importFrom tidyr pivot_longer
 #' @export
 tagHist <- function(tag_mtx,
                     minUMI = 10,
@@ -21,9 +22,6 @@ tagHist <- function(tag_mtx,
                     scale_y = FALSE,
                     bins = 100,
                     colors = NULL) {
-    require(tidyr)
-    require(ggplot2)
-    require(cowplot)
 
     tag_mtx <- as.data.frame(tag_mtx)
     # make sure there is a nUMI column
@@ -82,14 +80,13 @@ tagHist <- function(tag_mtx,
 #' @param colLow Color representing the minimum value of the heatmap
 #' @param colHigh Color representing the maximum value of the heatmap
 #'
+#' @importFrom tidyr pivot_longer
 #' @export
 tagCallHeatmap <- function(tag_mtx,
                        calls,
                        log = TRUE,
                        colLow = "white",
                        colHigh = "#c73647") {
-    require(pheatmap)
-    require(tidyr)
 
     if (sum(names(calls) %ni% rownames(tag_mtx)) > 0) {
         return(message("Error: cell barcodes do not match"))

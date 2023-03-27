@@ -31,7 +31,8 @@
 #'                        barcode.type = "MULTIseq",
 #'                        assay = "RNA",
 #'                        filter.cells = exp2_cells)
-#'
+#' @importFrom stringdist stringdist
+#' @importFrom ShortRead readFastq
 #' @export
 readTags <- function(dir,
                      name,
@@ -178,6 +179,7 @@ readTags <- function(dir,
 #'                      tag.ref,
 #'                      filter.cells = exp2_cells)
 #'
+#' @importFrom data.table data.table
 #' @export
 alignTags <- function(read_table,
                       tag.ref,

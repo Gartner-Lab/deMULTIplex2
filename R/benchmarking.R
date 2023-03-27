@@ -10,11 +10,11 @@ confusion_stats <- function(call_label, true_label,
     call_label <- as.character(call_label[names(true_label)])
     call_label[is.na(call_label)] <- 'NA'
     acc_mtx <- as.data.frame.matrix(table(call_label, true_label))
-    breaksList <- seq(0,1e3,by=1e2)
-    graphics.off() # Shut down open plotting devices if any left over
-    pdf(paste0(plot.path, plot.name, "_accmtx", ".pdf"), width = 3.5, height = 2.5)
-    pheatmap(acc_mtx, cluster_rows = F, cluster_cols = F, display_numbers =T, number_format ="%.0f", fontsize = 8, fontsize_number=8, color = colorRampPalette(c("white", "#c73647"))(length(breaksList)), breaks = breaksList)
-    dev.off()
+    # breaksList <- seq(0,1e3,by=1e2)
+    # graphics.off() # Shut down open plotting devices if any left over
+    # pdf(paste0(plot.path, plot.name, "_accmtx", ".pdf"), width = 3.5, height = 2.5)
+    # pheatmap(acc_mtx, cluster_rows = F, cluster_cols = F, display_numbers =T, number_format ="%.0f", fontsize = 8, fontsize_number=8, color = colorRampPalette(c("white", "#c73647"))(length(breaksList)), breaks = breaksList)
+    # dev.off()
 
     unq_true_label <- tag_mapping$true_label
     tag_stats <- list()
