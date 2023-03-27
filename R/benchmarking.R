@@ -1,4 +1,5 @@
 
+# These functions are used to benchmark deMULTIplex2 and existing methods.
 
 #' @export
 confusion_stats <- function(call_label, true_label,
@@ -71,7 +72,7 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
     set.seed(seed)
     require(deMULTIplex2)
     start_time <- Sys.time()
-    res <- demutiplexTags(tag_mtx,
+    res <- demutilplexTags(tag_mtx,
                           init.cos.cut = init.cos.cut,
                           converge.threshold = converge.threshold,
                           max.iter = max.iter,
