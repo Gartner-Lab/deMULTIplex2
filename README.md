@@ -3,6 +3,8 @@
 ## Installation
 
 ```
+Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
+
 if (!require("devtools", quietly = TRUE))
     install.packages("devtools")  # devtools must be correctly installed to install deMULTIplex2 from github source.
 
