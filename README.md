@@ -12,6 +12,8 @@ devtools::install_github("Gartner-Lab/deMULTIplex2") # install deMULTIplex2
 library(deMULTIplex2) # load deMULTIplex2 into session
 ```
 
+It is **recommended** (not required) to install ggrastr using `install.packages("ggrastr")`, because summary and diagnostic plots may have a lot of points (cells). deMULTIplex2 will use ggrastr to plot if it is correctly installed. 
+
 ## Starting with tag count matrix
 **`demultiplexTags()`** is the core function of deMULTIplex2. User must provide a tag count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. (2018) by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`.
 
@@ -66,8 +68,6 @@ tagCallHeatmap(tag_mtx,
 ## Troubleshooting
 
 * Installation failed on macOS - You may need to install Xquartz (https://www.xquartz.org/) first.
-
-* Installation failure may be related to dependency on ggrastr (https://github.com/VPetukhov/ggrastr), which in turn requires Cairo (https://www.cairographics.org/download/). Try install `ggrastr` via conda: `conda install -c conda-forge r-ggrastr` and Cairo: `conda install -c conda-forge r-cairo`. After these are correctly installed, re-run the install command in R.
 
 ## Cite deMULTIplex2
 

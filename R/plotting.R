@@ -1,6 +1,8 @@
 
 
 
+
+
 #' Tag-Count Histograms
 #' Plot log-scaled UMI histograms for each unique tag (in clean datasets, these will appear bimodal) and total UMI counts. \cr
 #' Helpful for visualizing tag data and diagnosing classification problems.
