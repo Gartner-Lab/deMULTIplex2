@@ -13,7 +13,6 @@ Imports:
     dplyr,
     Matrix,
     MASS,
-    ggrastr,
     RColorBrewer,
     ggplot2,
     grid,
@@ -26,6 +25,8 @@ Imports:
     uwot,
     XVector,
     devtools
+Suggests:
+    ggrastr
 License: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License
 Encoding: UTF-8
 LazyData: true

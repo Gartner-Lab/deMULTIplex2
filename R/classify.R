@@ -277,20 +277,21 @@ rqr.nb <- function (df, y, fit = "fit", model)
 }
 
 
-#' @importFrom ggrastr geom_point_rast
 #' @importFrom magrittr %>%
 #' @importFrom dplyr summarize_at group_by_at
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom ggplot2 ggplot aes aes_string scale_color_manual theme_bw ggtitle guides geom_text
 plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) {
+    geom_point_plot <- ifelse("ggrastr" %in% rownames(installed.packages()), ggrastr::geom_point_rast, ggplot2::geom_point)
+
     unq_bcs = unique(df$barcode_assign)
     unq_bcs = unq_bcs[!is.na(unq_bcs)]
     use_color = get_factor_color(unq_bcs, "Set1")
     names(use_color) = unq_bcs
 
     g1 <- ggplot(df, aes_string("UMAP_1", "UMAP_2")) +
-        geom_point_rast(aes_string(color = "barcode_assign"), stroke = 0, size = point.size) +
-        #geom_point_rast(data = df[!is.na(df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = .5) +
+        geom_point_plot(aes_string(color = "barcode_assign"), stroke = 0, size = point.size) +
+        #geom_point_plot(data = df[!is.na(df[["barcode_assign"]]), ], aes_string(color = "barcode_assign"), stroke = 0, size = .5) +
         scale_color_manual(values = use_color, na.value='lightgrey') +
         theme_bw() +
         ggtitle("barcode_assign") +
@@ -310,7 +311,7 @@ plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) 
     count_color = get_gradient_color("BlueGreenRed", cnum = length(levels(df$barcode_count)))
     names(count_color) = levels(df$barcode_count)
     g2 <- ggplot(df, aes_string("UMAP_1", "UMAP_2")) +
-        geom_point_rast(aes_string(color = "barcode_count"), stroke = 0, size = point.size) +
+        geom_point_plot(aes_string(color = "barcode_count"), stroke = 0, size = point.size) +
         scale_color_manual(values = count_color, na.value='lightgrey') +
         theme_bw() +
         ggtitle("barcode_count")
@@ -318,11 +319,12 @@ plotSummary <- function(df, point.size = 1, label.size = 3 , min.tag.show = 50) 
 }
 
 
-#' @importFrom ggrastr geom_point_rast
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom ggExtra ggMarginal
 #' @importFrom ggplot2 ggplot aes aes_string scale_color_manual scale_color_gradientn theme_bw ggtitle guides geom_text stat_qq stat_qq_line xlab ylab geom_abline theme_classic labs
 plot.all.diagnostics <- function(df, mappings, bc, prob.cut = 0.5, point.size = 1, ncol = 3) {
+    geom_point_plot <- ifelse("ggrastr" %in% rownames(installed.packages()), ggrastr::geom_point_rast, ggplot2::geom_point)
+
     plot_list <- list()
     for(i in 1:length(mappings)){
         map <- mappings[[i]]
@@ -345,7 +347,7 @@ plot.all.diagnostics <- function(df, mappings, bc, prob.cut = 0.5, point.size = 
                 ggtitle("QQ plot of standardized residuals")
         }else {
             p <- ggplot(df, aes_string(map[1], map[2])) +
-                geom_point_rast(aes_string(color = map[3]), stroke = 0, size = point.size) +
+                geom_point_plot(aes_string(color = map[3]), stroke = 0, size = point.size) +
                 ggtitle(bc) +
                 theme_bw() +
                 labs(color = gsub("_","\n",map[3]))

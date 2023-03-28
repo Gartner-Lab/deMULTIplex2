@@ -86,26 +86,27 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
 }
 
 
-#' @importFrom ggrastr geom_point_rast
 plot.em.diagnostics <- function(df) {
+    geom_point_plot <- ifelse("ggrastr" %in% rownames(installed.packages()), ggrastr::geom_point_rast, ggplot2::geom_point)
+
     g1 <- ggplot(df, aes_string(color = "prob0")) +
-        geom_point_rast(aes_string("log(tt.umi)", "log(bc.umi)"), size = 1, stroke = 0) +
-        geom_point_rast(aes_string("log(tt.umi)", "log(pred0)"), color = "grey", size = 1, stroke = 0) +
+        geom_point_plot(aes_string("log(tt.umi)", "log(bc.umi)"), size = 1, stroke = 0) +
+        geom_point_plot(aes_string("log(tt.umi)", "log(pred0)"), color = "grey", size = 1, stroke = 0) +
         scale_color_gradientn(colors =get_gradient_color("BlueGreenRed"))
 
     g2 <- ggplot(df, aes_string(color = "prob1")) +
-        geom_point_rast(aes_string("log(tt.umi)", "log(tt.umi-bc.umi)"), size = 1, stroke = 0) +
-        geom_point_rast(aes_string("log(tt.umi)", "log(pred1)"), color = "grey", size = 1, stroke = 0) +
+        geom_point_plot(aes_string("log(tt.umi)", "log(tt.umi-bc.umi)"), size = 1, stroke = 0) +
+        geom_point_plot(aes_string("log(tt.umi)", "log(pred1)"), color = "grey", size = 1, stroke = 0) +
         scale_color_gradientn(colors =get_gradient_color("BlueGreenRed"))
 
     g3 <- ggplot(df, aes_string(color = "post0")) +
-        geom_point_rast(aes_string("log(tt.umi)", "log(bc.umi)"), size = 1, stroke = 0) +
-        geom_point_rast(aes_string("log(tt.umi)", "log(pred0)"), color = "grey", size = 1, stroke = 0) +
+        geom_point_plot(aes_string("log(tt.umi)", "log(bc.umi)"), size = 1, stroke = 0) +
+        geom_point_plot(aes_string("log(tt.umi)", "log(pred0)"), color = "grey", size = 1, stroke = 0) +
         scale_color_gradientn(colors =get_gradient_color("BlueGreenRed"))
 
     g4 <- ggplot(df, aes_string(color = "post1")) +
-        geom_point_rast(aes_string("log(tt.umi)", "log(tt.umi-bc.umi)"), size = 1, stroke = 0) +
-        geom_point_rast(aes_string("log(tt.umi)", "log(pred1)"), color = "grey", size = 1, stroke = 0) +
+        geom_point_plot(aes_string("log(tt.umi)", "log(tt.umi-bc.umi)"), size = 1, stroke = 0) +
+        geom_point_plot(aes_string("log(tt.umi)", "log(pred1)"), color = "grey", size = 1, stroke = 0) +
         scale_color_gradientn(colors =get_gradient_color("BlueGreenRed"))
 
     return(arrangeGrob(grobs = list(g1,g2,g3,g4), ncol = 2))
