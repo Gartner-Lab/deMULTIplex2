@@ -27,8 +27,9 @@ Imports:
     devtools
 Suggests:
     ggrastr
-License: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License
+License: CC BY-NC-ND 4.0
 Encoding: UTF-8
+LazyLoad: yes
 LazyData: true
 biocViews: Software, Sequencing, RNASeq
 Roxygen: list(markdown = TRUE)

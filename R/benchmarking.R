@@ -72,7 +72,7 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
     set.seed(seed)
     require(deMULTIplex2)
     start_time <- Sys.time()
-    res <- demutilplexTags(tag_mtx,
+    res <- demultiplexTags(tag_mtx,
                           init.cos.cut = init.cos.cut,
                           converge.threshold = converge.threshold,
                           max.iter = max.iter,
@@ -89,8 +89,7 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
                           umap.nn = 30L,
                           seed = 1,
                           point.size = 1,
-                          label.size = 3,
-                          min.bc.show = 50)
+                          label.size = 3)
     assign("res",res, env=.GlobalEnv)
     end_time <- Sys.time()
     calls <- res$assign_table$barcode_assign
