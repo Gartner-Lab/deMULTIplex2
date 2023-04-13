@@ -33,7 +33,6 @@ library(Seurat);library(Matrix)
 seu1 <- Read10X("lib1/outs/multi/count/raw_feature_bc_matrix/") # Change this to your cellranger output path
 tag_mtx <- t(seu1$`Multiplexing Capture`[, cells_pass_filter]) # Suggest define and filter cells using transcriptome prior to demultiplexing
 ```
-Alternatively, just grep features with "CMO" in its name to get the tag count matrix.
 
 
 ## Starting with raw sequencing data (Illumina FASTQs)
