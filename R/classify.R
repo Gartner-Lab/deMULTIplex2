@@ -38,7 +38,7 @@
 #' `prob_mtx` is the posterior probability of each cell being positively tagged by each tag.
 #' `coefs` is the parameter estimates of the GLM models.
 #' `df_list` is a list of data frames for each tag containing stats from the final iteration of EM.
-#' @references To be added.
+#' @references Qin, Z., Danny, N. C., & Zev Jordan, G. (2023). Demultiplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275.
 #'
 #' @examples
 #' res <- demultiplexTags(tag_mtx,
@@ -171,20 +171,6 @@ demultiplexTags <- function(tag_mtx,
         glist[["summary"]] <- plotSummary(umap_df, point.size = point.size, label.size = label.size, min.tag.show = min.tag.show)
     }
 
-    # DEBUG
-    # if(1) {
-    #     bc == barcodes[1]
-    #     df <- data.frame(
-    #         bc.umi = tag_mtx[, bc],
-    #         res = res_mtx[,bc],
-    #         cos.umi = cos.umi_mtx[,bc],
-    #         cos.res = cos.res_mtx[,bc])
-    #     df$tt.umi <- rowSums(tag_mtx)
-    #     df <- cbind(df, umap_df)
-    #     df$is_negcell = 1:nrow(df) %in% neg_cell_list[[bc]]
-    #     assign("df",df, env = .GlobalEnv)
-    # }
-
     # Diagnostic Plots
     if (plot.diagnostics) {
         if(plot.umap=="none") stop("Please specify plot.umap.")
@@ -212,7 +198,6 @@ demultiplexTags <- function(tag_mtx,
                 c("UMAP_1", "UMAP_2", "prob.pos"),
                 c("UMAP_1", "UMAP_2", "barcode_count")
             )
-            #assign("df", df, env = .GlobalEnv)
             df$barcode_count[call_mtx[,bc] == 0] = NA
             glist[[bc]] <- plot.all.diagnostics(df, mappings, bc = bc, prob.cut = prob.cut, point.size = point.size, ncol=3)
         }

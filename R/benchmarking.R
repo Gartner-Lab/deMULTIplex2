@@ -33,7 +33,6 @@ confusion_stats <- function(call_label, true_label,
             f_score=f_score
         )
     }
-    assign("tag_stats",tag_stats, env=.GlobalEnv)
     singlet_stats <- c(
         precision = mean(sapply(tag_stats, function(x)x['precision'])), # na.rm?
         recall = mean(sapply(tag_stats, function(x)x['recall'])),
@@ -90,7 +89,6 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
                           seed = 1,
                           point.size = 1,
                           label.size = 3)
-    assign("res",res, env=.GlobalEnv)
     end_time <- Sys.time()
     calls <- res$assign_table$barcode_assign
     calls[res$assign_table$barcode_count == 0] = "Negative"
