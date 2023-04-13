@@ -1,0 +1,14 @@
+## R package reference generated from DESCRIPTION metadata
+citation(auto = meta)
+
+## NLME book
+bibentry(bibtype = "Article",
+         title = "deMULTIplex2: robust sample demultiplexing for scRNA-seq",
+         author = c(person(c("Qin"), "Zhu"),
+                    person(c("Daniel", "N."), "Conrad"),
+                    person(c("Zev", "J."), "Gartner")
+                    ),
+         year = "2023",
+         journal = "bioRxiv",
+         publisher = "Cold Spring Harbor Laboratory",
+         doi = "10.1101/2023.04.11.536275")

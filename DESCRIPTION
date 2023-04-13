@@ -1,10 +1,11 @@
 Package: deMULTIplex2
 Type: Package
-Title: Demultiplex2: improved sample demultiplexing for scRNA-seq
+Title: deMULTIplex2: robust sample demultiplexing for scRNA-seq
 Version: 1.0.0
-Author: Qin Zhu, Danny Conrad, Zev Gartner
+Date: 2023-04-12
+Author: Qin Zhu, Daniel N. Conrad, Zev J. Gartner
 Maintainer: Qin Zhu <qin.zhu@ucsf.edu>
-Description: Demultiplex2 is a bioinformatics algorithm for demultiplexing multiplexed single cell datasets.
+Description: Demultiplex2 is a bioinformatics algorithm for demultiplexing multiplexed single cell datasets. It is built on a statistical model of tag read counts derived from the physical mechanism of tag cross-contamination. See Zhu Q, Conrad DN, Gartner ZJ (2023)  <doi:10.1101/2023.04.11.536275> for details.
 Depends:
     R (>= 3.5.0)
 Imports:

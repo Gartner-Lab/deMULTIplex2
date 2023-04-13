@@ -20,12 +20,21 @@ It is **recommended** (not required) to install ggrastr using `install.packages(
 **`demultiplexTags()`** is the core function of deMULTIplex2. User must provide a tag count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. (2018) by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`.
 
 ```
-res <- demultiplexTags(tag_mtx,
-                       plot.path = "~/",
-                       plot.name = "test",
-                       plot.diagnostics = FALSE)
+res <- demultiplexTags(tag_mtx, # Required, the tag count matrix from your experiment, can be either dense or sparse
+                       plot.path = "~/", # Where to output a summary plot
+                       plot.name = "test", # text append to the name of the summary plot file
+                       plot.diagnostics = FALSE) # Whether to output diagnostics plots for each tag
 table(res$final_assign)
 ```
+
+For 10x Genomics 3’ CellPlex Multiplexing datasets, the latest version of Seurat can grab the CMO matrix from the raw matrix folder:
+```
+library(Seurat);library(Matrix)
+seu1 <- Read10X("lib1/outs/multi/count/raw_feature_bc_matrix/") # Change this to your cellranger output path
+tag_mtx <- t(seu1$`Multiplexing Capture`[, cells_pass_filter]) # Suggest define and filter cells using transcriptome prior to demultiplexing
+```
+Alternatively, just grep features with "CMO" in its name to get the tag count matrix.
+
 
 ## Starting with raw sequencing data (Illumina FASTQs)
 Make sure you have your barcode library sequenced and the reads saved in FASTQ format (can be gzipped).
@@ -73,7 +82,7 @@ tagCallHeatmap(tag_mtx,
 
 ## Cite deMULTIplex2
 
-To be added.
+Qin, Z., Danny, N. C., & Zev Jordan, G. (2023). Demultiplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275. https://doi.org/10.1101/2023.04.11.536275 
 
 ## License
 
