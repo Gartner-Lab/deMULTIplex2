@@ -67,12 +67,10 @@ tag_mtx = tag_mtx[cell_barcodes, ] # cell_barcodes can be determined using the t
 ## Visualization tools
 
 ```
-tagHist(tag_mtx,
-        minUMI = 10)
+tagHist(tag_mtx,minUMI = 10)
 ```
 ```
-tagCallHeatmap(tag_mtx,
-           res$final_assign)
+tagCallHeatmap(tag_mtx,res$final_assign)
 ```
 
 ## Troubleshooting
