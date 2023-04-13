@@ -1,6 +1,6 @@
 
 
-# Code for EM, used by demutiplexTags in classify.R
+# Code for EM, used by demultiplexTags in classify.R
 
 sum.finite <- function(x) {
     sum(x[is.finite(x)])
