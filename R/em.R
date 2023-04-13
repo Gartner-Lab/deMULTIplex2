@@ -63,10 +63,7 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
         df$prob0 <- dnbinom(df$bc.umi, mu=df$pred0, size=fit0$theta)
         df$pred1 <- predict(fit1, df, type = "response", se.fit=FALSE)
         df$prob1 <- dnbinom(df$tt.umi - df$bc.umi, mu=df$pred1, size=fit1$theta)
-        #assign("df1",df, env=.GlobalEnv)
-        #assign("fit0", fit0, env=.GlobalEnv)
-        # Which is best to use? more robust?
-        #df$prob0[df$bc.umi < df$pred0] = 1
+
         df$prob0[df$bc.umi < df$pred0] = dnbinom(ceiling(df$pred0[df$bc.umi < df$pred0]), mu=df$pred0[df$bc.umi < df$pred0], size=fit0$theta)
         df$post0 <- e.res$posterior.prob[,1]
         df$post1 <- e.res$posterior.prob[,2]

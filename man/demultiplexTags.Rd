@@ -94,5 +94,5 @@ table(res$final_assign)
 
 }
 \references{
-To be added.
+Qin, Z., Danny, N. C., & Zev Jordan, G. (2023). Demultiplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275.
 }
