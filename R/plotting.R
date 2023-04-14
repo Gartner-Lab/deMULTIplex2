@@ -26,7 +26,7 @@ tagHist <- function(tag_mtx,
                     bins = 100,
                     colors = NULL) {
 
-    tag_mtx <- as.data.frame(tag_mtx)
+    tag_mtx <- as.data.frame(as.matrix(tag_mtx))
     # make sure there is a nUMI column
     if ("nUMI" %ni% colnames(tag_mtx)) {
         tag_mtx$nUMI <- rowSums(tag_mtx)
@@ -87,10 +87,12 @@ tagHist <- function(tag_mtx,
 #' @importFrom ggplot2 ggplot aes aes_string theme scale_fill_gradient geom_tile geom_text theme_classic element_text
 #' @export
 tagCallHeatmap <- function(tag_mtx,
-                       calls,
-                       log = TRUE,
-                       colLow = "white",
-                       colHigh = "#c73647") {
+                           calls,
+                           log = TRUE,
+                           colLow = "white",
+                           colHigh = "#c73647") {
+
+    tag_mtx <- as.matrix(tag_mtx)
 
     if (sum(names(calls) %ni% rownames(tag_mtx)) > 0) {
         return(message("Error: cell barcodes do not match"))
