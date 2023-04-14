@@ -1,7 +1,9 @@
-# deMULTIplex2
-Qin Zhu, Daniel N. Conrad and Zev J. Gartner
+<img src="img/Logo.gif" width="50%"> <br>
+by Qin Zhu, Daniel N. Conrad and Zev J. Gartner
 
-deMULTIplex2 is a mechanism-guided classification algorithm for multiplexed scRNA-seq data that successfully recovers many more cells across a spectrum of challenging datasets compared to existing methods. deMULTIplex2 is built on a statistical model of tag read counts derived from the physical mechanism of tag cross-contamination. Using generalized linear models and expectation-maximization, deMULTIplex2 probabilistically infers the sample identity of each cell and classifies singlets with high accuracy. 
+**deMULTIplex2** is a mechanism-guided classification algorithm for multiplexed scRNA-seq data that successfully recovers many more cells across a spectrum of challenging datasets compared to existing methods. deMULTIplex2 is built on a statistical model of tag read counts derived from the physical mechanism of tag cross-contamination. Using generalized linear models and expectation-maximization, deMULTIplex2 probabilistically infers the sample identity of each cell and classifies singlets with high accuracy. 
+
+<img src="img/Figure_1A.png" width="80%" alt="Fig1A"> <br>
 
 ## Installation
 
@@ -25,6 +27,7 @@ res <- demultiplexTags(tag_mtx, # Required, the tag count matrix from your exper
                        plot.path = "~/", # Where to output a summary plot
                        plot.name = "test", # text append to the name of the summary plot file
                        plot.diagnostics = FALSE) # Whether to output diagnostics plots for each tag
+                       # set plot.umap = "none" to not produce any plots
 table(res$final_assign)
 ```
 
@@ -62,17 +65,27 @@ tag_mtx <- alignTags(read_table, tag.ref)
 
 The produced tag matrix can then be used as input for the `demultiplexTags` function. It is recommended to pre-filter the matrix to remove majority of the empty droplets for robust classification, i.e.,
 ```
-tag_mtx = tag_mtx[cell_barcodes, ] # cell_barcodes can be determined using the transcriptome data, or by setting a minimum count threshold
+# either select for known cells (determined by transcriptome analysis, cellranger output, etc.)
+tag_mtx <- tag_mtx[cell_barcodes, ] 
+
+# or filter for minimum total tag counts, i.e. 
+tag_mtx <- tag_mtx[Matrix::rowSums(tag_mtx) >= 10,]
+
 ```
 
 ## Visualization tools
 
 ```
-tagHist(tag_mtx,minUMI = 10)
+tagHist(tag_mtx = stoeckius_pbmc, 
+        minUMI = 100, 
+        plotnUMI = T)
 ```
+<img src="img/tagHist.png" width="40%"> <br>
 ```
-tagCallHeatmap(tag_mtx,res$final_assign)
+tagCallHeatmap(tag_mtx = stoeckius_pbmc, 
+               calls = res$final_assign)
 ```
+<img src="img/tagCallHeatmap.png" width="40%"> <br>
 
 ## Troubleshooting
 
@@ -80,7 +93,7 @@ tagCallHeatmap(tag_mtx,res$final_assign)
 
 ## Cite deMULTIplex2
 
-Qin, Z., Danny, N. C., & Zev Jordan, G. (2023). Demultiplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275. https://doi.org/10.1101/2023.04.11.536275 
+Zhu Q, Conrad DN, & Gartner ZJ. (2023). Demultiplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275. https://doi.org/10.1101/2023.04.11.536275 
 
 ## License
 
