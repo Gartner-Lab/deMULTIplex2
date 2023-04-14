@@ -1,9 +1,9 @@
-<img src="img/Logo.gif" width="50%"> <br>
+<img src="inst/img/Logo.gif" width="50%"> <br>
 by Qin Zhu, Daniel N. Conrad and Zev J. Gartner
 
 **deMULTIplex2** is a mechanism-guided classification algorithm for multiplexed scRNA-seq data that successfully recovers many more cells across a spectrum of challenging datasets compared to existing methods. deMULTIplex2 is built on a statistical model of tag read counts derived from the physical mechanism of tag cross-contamination. Using generalized linear models and expectation-maximization, deMULTIplex2 probabilistically infers the sample identity of each cell and classifies singlets with high accuracy. 
 
-<img src="img/Figure_1A.png" width="80%" alt="Fig1A"> <br>
+<img src="inst/img/Figure_1A.png" width="80%" alt="Fig1A"> <br>
 
 ## Installation
 
@@ -80,12 +80,12 @@ tagHist(tag_mtx = stoeckius_pbmc,
         minUMI = 100, 
         plotnUMI = T)
 ```
-<img src="img/tagHist.png" width="40%"> <br>
+<img src="inst/img/tagHist.png" width="40%"> <br>
 ```
 tagCallHeatmap(tag_mtx = stoeckius_pbmc, 
                calls = res$final_assign)
 ```
-<img src="img/tagCallHeatmap.png" width="40%"> <br>
+<img src="inst/img/tagCallHeatmap.png" width="40%"> <br>
 
 ## Troubleshooting
 
