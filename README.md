@@ -54,6 +54,7 @@ read_table <- readTags(dir = "~/Experiment2",
                        assay = "RNA",
                        filter.cells = exp2_cells)
 ```
+<img src="inst/img/read_table.png" width="40%">
 
 Next, **`alignTags()`** will take this read table and count the number of UMIs detected per tag, per cell. Sample tag reads are error-corrected by aligning them to a provided vector of tag sequences used in the experiment. You can manually supply these sequences, or they can be subset from the full vector of MULTI-seq barcodes provided with this package.  Use `?alignTags` in R to check details. 
 
@@ -62,6 +63,7 @@ data(multiseq_oligos) # Current MULTI-seq oligo sequence provided with the packa
 tag.ref <- multiseq_oligos[1:24] # Assuming the first 24 tags are used
 tag_mtx <- alignTags(read_table, tag.ref)
 ```
+<img src="inst/img/tag_mtx.png" width="40%">
 
 The produced tag matrix can then be used as input for the `demultiplexTags` function. It is recommended to pre-filter the matrix to remove majority of the empty droplets for robust classification, i.e.,
 ```

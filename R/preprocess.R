@@ -193,7 +193,10 @@ alignTags <- function(read_table,
     string.dist.method <- match.arg(string.dist.method)
 
     if(is.null(names(tag.ref))) {
-        stop("tag.ref must be a named character vector. Check data('multiseq_oligos') for an example.")
+        # stop("tag.ref must be a named character vector. Check data('multiseq_oligos') for an example.")
+        message("Warning - tag.ref should be a named character vector. See data('multiseq_oligos') for an example.")
+        message(paste0("Setting tag names as Tag1-", length(tag.ref), sep=""))
+        names(tag.ref) <- paste("Tag", 1:length(tag.ref), sep="")
     }
 
     if (is.null(filter.cells)) {
