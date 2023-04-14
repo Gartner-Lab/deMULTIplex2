@@ -77,6 +77,8 @@ demultiplexTags <- function(tag_mtx,
     plot.umap <- match.arg(plot.umap)
     residual.type <- match.arg(residual.type)
 
+    colnames(tag_mtx) <- as.character(colnames(tag_mtx)) # Make sure the column names are unnamed.
+
     if(any(init.cos.cut < 0.5)) {
         cat("Warning: setting init.cos.cut less than 0.5 is not recommended.", fill=T)
     }
