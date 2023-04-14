@@ -15,7 +15,7 @@ alignTags(
 \arguments{
 \item{read_table}{Data.frame containing variables "Cell", "UMI", and "Sample" as output by readTags() function}
 
-\item{tag.ref}{Character vector of sample tag sequences used in experiment}
+\item{tag.ref}{Named character vector of sample tag sequences used in experiment, use data("multiseq_oligos") to check for an example.}
 
 \item{filter.cells}{Optional: a character vector of cell barcodes to filter the read table by. Redundant if already filtered with readTags() (default: NULL)}
 
@@ -37,8 +37,9 @@ CTTAGGCCTGAACATA TTTCACAC TGAGACCT
 TCTGAGCCTAAACTGA CAAAGAGG CCACAATG
 TTCTAGACTGAATTGA GATACGCA TGAGACCT
 
+data("multiseq_oligos")
 tag_mtx <- alignTags(read_table,
-                     tag.ref,
+                     tag.ref = multiseq_oligos,
                      filter.cells = exp2_cells)
 
 }

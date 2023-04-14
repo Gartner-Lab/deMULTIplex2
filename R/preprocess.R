@@ -162,7 +162,7 @@ readTags <- function(dir,
 #' Updated version of MULTIseq.align() from original deMULTIplex package.
 #'
 #' @param read_table Data.frame containing variables "Cell", "UMI", and "Sample" as output by readTags() function
-#' @param tag.ref Character vector of sample tag sequences used in experiment
+#' @param tag.ref Named character vector of sample tag sequences used in experiment, use data("multiseq_oligos") to check for an example.
 #' @param filter.cells Optional: a character vector of cell barcodes to filter the read table by. Redundant if already filtered with readTags() (default: NULL)
 #' @param string.dist.method Specify method for calculating string distance between reference tags and tag reads when correcting for sequencing errors. See ?stringdist for options (default: hamming)
 #' @param max.dist Specify maximum string distance allowed for correcting sequencing errors in sample tags (default: 1)
@@ -176,8 +176,9 @@ readTags <- function(dir,
 #' TCTGAGCCTAAACTGA CAAAGAGG CCACAATG
 #' TTCTAGACTGAATTGA GATACGCA TGAGACCT
 #'
+#' data("multiseq_oligos")
 #' tag_mtx <- alignTags(read_table,
-#'                      tag.ref,
+#'                      tag.ref = multiseq_oligos,
 #'                      filter.cells = exp2_cells)
 #'
 #' @importFrom data.table data.table
@@ -190,6 +191,11 @@ alignTags <- function(read_table,
                       max.dist = 1) {
     t0 <- Sys.time()
     string.dist.method <- match.arg(string.dist.method)
+
+    if(is.null(names(tag.ref))) {
+        stop("tag.ref must be a named character vector. Check data('multiseq_oligos') for an example.")
+    }
+
     if (is.null(filter.cells)) {
         cells <- unique(read_table$Cell)
         cells <- cells[cells != paste(rep("G",16),collapse = "")]
@@ -216,7 +222,7 @@ alignTags <- function(read_table,
     cnt_ind <- cnt_ind[complete.cases(cnt_ind),] # Added to account for provided cell list not in data
     tag_mtx <- sparseMatrix(i = cnt_ind$i, j = cnt_ind$j, x = cnt_ind$Freq, dims = c(length(cells), length(tag.ref)))
     rownames(tag_mtx) <- cells
-    colnames(tag_mtx) <- tag.ref
+    colnames(tag_mtx) <- names(tag.ref)
 
     cat("Finished in",
         round(difftime(Sys.time(), t0, units = "secs")[[1]]),
