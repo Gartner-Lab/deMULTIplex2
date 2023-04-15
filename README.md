@@ -20,9 +20,10 @@ library(deMULTIplex2) # load deMULTIplex2 into session
 It is **recommended** (not required) to install ggrastr using `install.packages("ggrastr")`, because summary and diagnostic plots may have a lot of points (cells). deMULTIplex2 will use ggrastr to plot if it is correctly installed. 
 
 ## Starting with tag count matrix
-**`demultiplexTags()`** is the core function of deMULTIplex2. User must provide a tag count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. (2018) by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`. Use `?demultiplexTags` in R to check details. 
+**`demultiplexTags()`** is the core function of deMULTIplex2. User must provide a tag count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. (2018) by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`. Use `?demultiplexTags` in R to check details. It is **strongly recommended** to pre-filter the matrix to remove majority of the empty droplets for robust classification.
 
 ```
+tag_mtx <- tag_mtx[cell_barcodes, ] 
 res <- demultiplexTags(tag_mtx, # Required, the tag count matrix from your experiment, can be either dense or sparse
                        plot.path = "~/", # Where to output a summary plot
                        plot.name = "test", # text append to the name of the summary plot file
@@ -35,7 +36,7 @@ For 10x Genomics 3’ CellPlex Multiplexing datasets, the latest version of Seur
 ```
 library(Seurat);library(Matrix)
 seu1 <- Read10X("lib1/outs/multi/count/raw_feature_bc_matrix/") # Change this to your cellranger output path
-tag_mtx <- t(seu1$`Multiplexing Capture`[, cells_pass_filter]) # Suggest define and filter cells using transcriptome prior to demultiplexing
+tag_mtx <- t(seu1$`Multiplexing Capture`[, cells_pass_filter]) # Strongly suggest define and filter cells using transcriptome prior to demultiplexing
 ```
 
 
@@ -65,15 +66,7 @@ tag_mtx <- alignTags(read_table, tag.ref)
 ```
 <img src="inst/img/tag_mtx.png" width="40%">
 
-The produced tag matrix can then be used as input for the `demultiplexTags` function. It is recommended to pre-filter the matrix to remove majority of the empty droplets for robust classification, i.e.,
-```
-# either select for known cells (determined by transcriptome analysis, cellranger output, etc.)
-tag_mtx <- tag_mtx[cell_barcodes, ] 
-
-# or filter for minimum total tag counts, i.e. 
-tag_mtx <- tag_mtx[Matrix::rowSums(tag_mtx) >= 10,]
-
-```
+The produced tag matrix can then be used as input for the `demultiplexTags` function. 
 
 ## Visualization tools
 
