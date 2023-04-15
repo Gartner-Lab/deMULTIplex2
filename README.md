@@ -20,7 +20,7 @@ library(deMULTIplex2) # load deMULTIplex2 into session
 It is **recommended** (not required) to install ggrastr using `install.packages("ggrastr")`, because summary and diagnostic plots may have a lot of points (cells). deMULTIplex2 will use ggrastr to plot if it is correctly installed. 
 
 ## Starting with tag count matrix
-**`demultiplexTags()`** is the core function of deMULTIplex2. User must provide a tag count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. (2018) by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`. Use `?demultiplexTags` in R to check details. It is **strongly recommended** to pre-filter the matrix to remove majority of the empty droplets for robust classification.
+**`demultiplexTags()`** is the core function of deMULTIplex2. User must provide a tag count matrix where rows are individual cells and columns represent unique sample tags. You can load an example tag matrix from Stoeckius et al. (2018) by calling `data(stoeckius_pbmc);tag_mtx <- stoeckius_pbmc`. Use `?demultiplexTags` in R to check details. It is **strongly recommended** to pre-filter the matrix to remove majority of the empty droplets for robust classification (See Troubleshooting for details). 
 
 ```
 tag_mtx <- tag_mtx[cell_barcodes, ] 
@@ -85,6 +85,8 @@ tagCallHeatmap(tag_mtx = stoeckius_pbmc,
 ## Troubleshooting
 
 * Installation failed on macOS - You may need to install Xquartz (https://www.xquartz.org/) first.
+
+* `demultiplexTags` function works best when most empty droplets/beads are removed. Consider using the transcriptome umi count, detected gene, or total tag umi count (not recommended) to determine which barcodes are cells. For maximal cell recovery, you can lower the cutoff to include some low quality cells and beads, and run deMULTIplex2 on the data to determine which are the labeled cells. In practice, we found as long as barcodes representing empty droplets/beads do not exceed 50% of the input data, deMULTIplex2 can properly fit the model and classify cells.
 
 ## Cite deMULTIplex2
 
