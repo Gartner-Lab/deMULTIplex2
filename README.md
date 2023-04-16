@@ -5,6 +5,13 @@ by Qin Zhu, Daniel N. Conrad and Zev J. Gartner
 
 <img src="inst/img/Figure_1A.png" width="80%" alt="Fig1A"> <br>
 
+## Compatibility
+
+Because of its mechanism-guided design, **deMULTIplex2** is optimized to work with datasets generated from methods that label cells or nuclei with DNA barcodes for pooled processing, including but not limited to: <br>
+* [MULTI-seq](https://www.nature.com/articles/s41592-019-0433-8) (2019)
+* [Cell Hashing](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-018-1603-1) (2018)
+* [CellPlex](https://kb.10xgenomics.com/hc/en-us/articles/360056934011-What-resources-are-available-for-the-3-CellPlex-Kit-for-Cell-Multiplexing) (2021)
+
 ## Installation
 
 ```
@@ -90,7 +97,7 @@ tagCallHeatmap(tag_mtx = stoeckius_pbmc,
 
 ## Cite deMULTIplex2
 
-Zhu Q, Conrad DN, & Gartner ZJ. (2023). Demultiplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275. https://doi.org/10.1101/2023.04.11.536275 
+Zhu Q, Conrad DN, & Gartner ZJ. (2023). deMULTIplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275. https://doi.org/10.1101/2023.04.11.536275 
 
 ## License
 
