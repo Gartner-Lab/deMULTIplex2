@@ -78,6 +78,8 @@ The produced tag matrix can then be used as input for the `demultiplexTags` func
 
 ## Visualization tools
 
+You can find a summary plot in your specified directory after running `demultiplexTags`. If you set `plot.diagnostics = TRUE`, the pdf file will also contain key diagnostic plots for each tag. Check out our paper if you would like to use these plots to investigate the distribution of individual tag counts. We provide some additional visualization functions for data diagnostics:
+
 ```
 tagHist(tag_mtx = stoeckius_pbmc, 
         minUMI = 100, 
