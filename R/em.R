@@ -64,7 +64,11 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
         df$pred1 <- predict(fit1, df, type = "response", se.fit=FALSE)
         df$prob1 <- dnbinom(df$tt.umi - df$bc.umi, mu=df$pred1, size=fit1$theta)
 
-        df$prob0[df$bc.umi < df$pred0] = dnbinom(ceiling(df$pred0[df$bc.umi < df$pred0]), mu=df$pred0[df$bc.umi < df$pred0], size=fit0$theta)
+        neg_c <- df$bc.umi < df$pred0
+        df$prob0[neg_c] = dnbinom(ceiling(df$prob0[neg_c]), mu=df$prob0[neg_c], size=fit0$theta) # this "soft" assign may be best for initialization
+        pos_c <- (df$tt.umi - df$bc.umi) < df$pred1
+        df$prob1[pos_c] = dnbinom(ceiling(df$pred1[pos_c]), mu=df$pred1[pos_c], size=fit1$theta)
+
         df$post0 <- e.res$posterior.prob[,1]
         df$post1 <- e.res$posterior.prob[,2]
     }
@@ -116,7 +120,11 @@ e.step <- function(df, fit0, fit1, pi.vector, plot = FALSE) {
     prob0 <- dnbinom(df$bc.umi, mu=pred0, size=fit0$theta)
     pred1 <- predict(fit1, df, type = "response", se.fit=FALSE)
     prob1 <- dnbinom(df$tt.umi - df$bc.umi, mu=pred1, size=fit1$theta)
-    prob0[df$bc.umi < pred0] = 1
+    neg_c <- df$bc.umi < pred0
+    prob0[neg_c] = 1 # Seems work best based on some super noisy test data
+    #prob0[neg_c] = dnbinom(ceiling(pred0[neg_c]), mu=pred0[neg_c], size=fit0$theta)
+    pos_c <- (df$tt.umi - df$bc.umi) < pred1
+    prob1[pos_c] = dnbinom(ceiling(pred1[pos_c]), mu=pred1[pos_c], size=fit1$theta)
 
     pi0 = pi.vector[1]
     pi1 = pi.vector[2]
