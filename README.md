@@ -7,7 +7,7 @@ by Qin Zhu, Daniel N. Conrad and Zev J. Gartner
 
 ## Compatibility
 
-Because of its mechanism-guided design, **deMULTIplex2** is broadly applicable to datasets generated from technologies that label cells or nuclei with a sample-specific tag (e.g., DNA oligonucleotides) for pooled processing, including but not limited to:
+**deMULTIplex2** is broadly applicable to datasets generated from technologies that label cells or nuclei with a sample-specific tag (e.g., DNA oligonucleotides) for pooled processing, including but not limited to:
 
 * [MULTI-seq](https://www.nature.com/articles/s41592-019-0433-8) (2019)
 * [Cell Hashing](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-018-1603-1) (2018)
