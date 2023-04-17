@@ -57,7 +57,9 @@ Make sure you have your barcode library sequenced and the reads saved in FASTQ f
 | Exp2MULTI_S3_L002_R1_001.fastq.gz
 | Exp2MULTI_S3_L002_R2_001.fastq.gz
 ```
-Provide **`readTags()`** with the location of the files, the prefix of the FASTQ file names for the library you want to process, and the type of barcode and assay you used. You may also provide a vector of cell barcodes (i.e. from the barcodes.tsv file output by cellranger) to pre-filter your barcode reads. Use `?readTags` in R to check details. 
+
+Provide **`readTags()`** with the location of the files, the prefix of the FASTQ file names for the library you want to process, and the type of barcode and assay you used. You may also provide a vector of cell barcodes (i.e. from the barcodes.tsv file output by cellranger) to pre-filter your barcode reads. Use `?readTags` in R to check details.
+
 ```
 read_table <- readTags(dir = "~/Experiment2",
                        name = "Exp2MULTI",
