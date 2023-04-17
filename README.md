@@ -49,7 +49,9 @@ tag_mtx <- t(seu1$`Multiplexing Capture`[, cells_pass_filter]) # Strongly sugges
 
 
 ## Starting with raw sequencing data (Illumina FASTQs)
+
 Make sure you have your barcode library sequenced and the reads saved in FASTQ format (can be gzipped).
+
 ```
 ~/Experiment2
 | Exp2MULTI_S3_L002_R1_001.fastq.gz
