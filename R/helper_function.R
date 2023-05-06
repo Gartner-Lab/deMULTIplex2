@@ -48,9 +48,9 @@ numeric_color_opt <- function() {
 #' @export
 get_gradient_color <- function(palette = NULL, cnum = 100) {
     if(is.null(palette)) stop("please specify a palette")
-    allowed_pals <- numeric_color_opt()
+    #allowed_pals <- numeric_color_opt()
 
-    if(!palette %in% allowed_pals) stop(paste0("Please specify one of '", paste(allowed_pals, collapse = "', '"), "'."))
+    #if(!palette %in% allowed_pals) stop(paste0("Please specify one of '", paste(allowed_pals, collapse = "', '"), "'."))
     if(palette %in% get_brewer_set(c("sequential", "diverging"))) {
         colorRampPalette(rev(RColorBrewer::brewer.pal(9,palette)))(cnum)
     } else if(palette %in% list("viridis" = "viridis", "magma" = "magma", "plasma" = "plasma", "inferno" = "inferno")) {
