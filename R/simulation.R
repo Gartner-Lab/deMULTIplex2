@@ -107,19 +107,8 @@ simulateTags <- function(n.cell = 1000,
 }
 
 
-# code adapted from countsSampling function from scRecover
-#' @export
-downsample_mtx <- function(mtx, ratio = .1, seed = 1) {
-    set.seed(seed)
-    ds_mtx <- t(apply(mtx, 1, function(x) {
-        n <- floor(sum(x) * ratio)
-        ds_reads <- sort(sample(seq_len(sum(x)), n))
-        read_breaks <- c(0, cumsum(x))
-        hist(ds_reads, breaks = read_breaks, plot = FALSE)$count
-    }))
-    colnames(ds_mtx) <- colnames(mtx)
-    return(ds_mtx)
-}
+
+
 
 
 
