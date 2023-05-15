@@ -28,7 +28,7 @@ Imports:
     devtools
 Suggests:
     ggrastr
-License: CC BY-NC-ND 4.0
+License: CC BY 4.0
 Encoding: UTF-8
 LazyLoad: yes
 LazyData: true
