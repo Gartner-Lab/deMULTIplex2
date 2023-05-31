@@ -72,7 +72,7 @@ readTags <- function(dir,
     } else if (barcode.type == "MULTI-ATAC" & assay == "Multiome") {
         pos.cbc <- c(9,24)
         pos.sbc <- c(1,8)
-        pos.umi <- c(17,28)
+        pos.umi <- c(9,16)
     } else { cat("Using custom read positions") }
 
     if (file.exists(as.character(fastq.A))) {
@@ -104,7 +104,7 @@ readTags <- function(dir,
     if (barcode.type == "MULTIseq") {
         cat("Extracting Cell Barcodes & UMIs...", fill = T)
         read_table <- data.frame(Cell = subseq(sread(r), pos.cbc[1], pos.cbc[2]),
-                                UMI = subseq(sread(r), pos.umi[1], pos.umi[2]))
+                                 UMI = subseq(sread(r), pos.umi[1], pos.umi[2]))
     }
     if (barcode.type == "MULTI-ATAC") {
         cat("Extracting Cell Barcodes...", fill = T)
@@ -209,29 +209,64 @@ alignTags <- function(read_table,
         unique_tags <- unique(read_table$Sample)
         corrected_tags<-sapply(unique_tags, function(x){
             if(!x %in% tag.ref) {
-                x2 = tag.ref[which(stringdist(x, tag.ref, method = string.dist.method)==max.dist)]
+                x2 <- tag.ref[which(stringdist(x, tag.ref, method = string.dist.method)==max.dist)]
+                x2 <- unname(x2)
                 if(length(x2) == 1) x2 else NA
             } else x
         })
+
+        # Calculate error-correction stats
+        nomatch <- unique_tags[unique_tags %ni% tag.ref]
+        nomatch_corrected <- corrected_tags[nomatch]
+        nomatch_corrected <- nomatch_corrected[!is.na(nomatch_corrected)]
+
+        corrected <- sum(!is.na(nomatch_corrected[read_table$Sample]))
+        corrected_perc <- corrected/nrow(read_table)
+        corrected_perc <- round(corrected_perc * 100, 1)
+
         read_table$Sample <- corrected_tags[read_table$Sample]
     }
 
-    cat("Assembling tag count table...", fill = T)
-    dt <- data.table(read_table[,c("Cell", "Sample")])
+    mappable <- sum(!is.na(read_table$Sample))
+    mappable_perc <- round(mappable/nrow(read_table) * 100, 1)
+
+    cat("Assembling tag count table from mappable reads...", fill = T)
+    dt <- data.table(read_table)
     dt <- dt[complete.cases(dt), ]
-    cnt_ind <- dt[, list(Freq =.N), by=list(Cell,Sample)]
-    cnt_ind$i <- (1:length(cells))[match(cnt_ind$Cell, cells)] # NA?
-    cnt_ind$j <- (1:length(tag.ref))[match(cnt_ind$Sample, tag.ref)]
-    cnt_ind <- cnt_ind[complete.cases(cnt_ind),] # Added to account for provided cell list not in data
-    tag_mtx <- sparseMatrix(i = cnt_ind$i, j = cnt_ind$j, x = cnt_ind$Freq, dims = c(length(cells), length(tag.ref)))
+    cnt_dup <- dt[, list(Freq =.N), by=list(Cell,Sample,UMI)] # deduplicate UMIs (Freq not informative here)
+    cnt_umi <- cnt_dup[, list(Freq =.N), by=list(Cell,Sample)] # tally up UMIs of each Sample tag per Cell
+    cnt_umi$i <- (1:length(cells))[match(cnt_umi$Cell, cells)] # finds index of of each cell barcode in reference list
+    cnt_umi$j <- (1:length(tag.ref))[match(cnt_umi$Sample, tag.ref)] # finds index of of each sample tag in reference list
+    cnt_umi <- cnt_umi[complete.cases(cnt_umi),] # Added to account for provided cell list not in data
+    tag_mtx <- sparseMatrix(i = cnt_umi$i, j = cnt_umi$j, x = cnt_umi$Freq, dims = c(length(cells), length(tag.ref)))
     rownames(tag_mtx) <- cells
     colnames(tag_mtx) <- names(tag.ref)
 
     cat("Finished in",
         round(difftime(Sys.time(), t0, units = "secs")[[1]]),
-        "seconds", sep = " ")
-
+        "seconds", sep = " ", fill = T)
     cat("\n")
+
+    # Report Read Mapping & Error Correction Stats
+    unique <- nrow(cnt_dup)
+    unique_perc <- round(unique/nrow(dt) * 100, 1)
+    saturation <- 100 - unique_perc
+
+    incell <- sum(cnt_umi$Freq)
+    incell_perc <- round(incell / nrow(cnt_dup) * 100, 1)
+
+    cat("Statistics:", fill = T)
+    cat("   ", mappable_perc,"% (", format(mappable, big.mark=",", scientific=FALSE), ") \t of tag reads mapped to reference tags", sep = "", fill = T)
+    if (max.dist > 0) {
+        cat("      ", corrected_perc,"% (", format(corrected, big.mark=",", scientific=FALSE), ") \t of tag reads mapped with error-correction by ", string.dist.method, " distance = ", max.dist, sep = "", fill = T)
+    } else cat("No tag error correction performed (max.dist = 0)")
+    cat("   ", unique_perc,"% (", format(unique, big.mark=",", scientific=FALSE), ") \t of mappable tag reads are unique", sep = "", fill = T)
+    if (!is.null(filter.cells)) {
+        cat("   ", incell_perc,"% (", format(incell, big.mark=",", scientific=FALSE), ") \t of deduplicated, mapped tag reads are associated with provided cell barcodes", sep = "", fill = T)
+    }
+    cat("\n")
+    cat("   Sequencing Saturation: ", saturation, "%", sep = "", fill = T)
+
     return(tag_mtx)
 }
 
