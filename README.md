@@ -80,7 +80,27 @@ tag_mtx <- alignTags(read_table, tag.ref)
 
 The produced tag matrix can then be used as input for the `demultiplexTags` function. 
 
-See below for a complete code example with example fastq files (Download from https://github.com/Gartner-Lab/deMULTIplex2_test_data/) from McGinnis et al:
+See below for a complete code example with fastq files from McGinnis et al(Download from https://github.com/Gartner-Lab/deMULTIplex2_test_data/):
+
+```
+fastq_dir <- "McGinnis_BAR_fastq/"
+read_table <- readTags(dir = fastq_dir,
+                       name = "TGACCA",
+                       barcode.type = "MULTIseq",
+                       assay = "RNA")
+
+data(multiseq_oligos) # Current MULTI-seq oligo sequence provided with the package
+tag.ref <- multiseq_oligos
+tag_mtx <- alignTags(read_table, tag.ref)
+cell_ids <- Matrix::rowSums(tag_mtx) > 100 # Filter for cells (it's better to use your own cell filter criteria based on RNA count)
+tag_used <- Matrix::colSums(tag_mtx) > 1e4 # Filter for used tags
+tag_mtx <- tag_mtx[cell_ids,tag_used]
+
+res <- demultiplexTags(tag_mtx,
+                       plot.path = "./",
+                       plot.name = "demux2_",
+                       plot.diagnostics = T)
+```
 
 ```
 fastq_dir <- "McGinnis_BAR_fastq/"
