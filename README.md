@@ -102,26 +102,6 @@ res <- demultiplexTags(tag_mtx,
                        plot.diagnostics = T)
 ```
 
-```
-fastq_dir <- "McGinnis_BAR_fastq/"
-read_table <- readTags(dir = fastq_dir,
-                       name = "TGACCA",
-                       barcode.type = "MULTIseq",
-                       assay = "RNA")
-
-data(multiseq_oligos) # Current MULTI-seq oligo sequence provided with the package
-tag.ref <- multiseq_oligos
-tag_mtx <- alignTags(read_table, tag.ref)
-cell_ids <- Matrix::rowSums(tag_mtx) > 100 # Filter for cells (it's better to use your own cell filter criteria based on RNA count)
-tag_used <- Matrix::colSums(tag_mtx) > 1e4 # Filter for used tags
-tag_mtx <- tag_mtx[cell_ids,tag_used]
-
-res <- demultiplexTags(tag_mtx,
-                       plot.path = "./",
-                       plot.name = "demux2_",
-                       plot.diagnostics = T)
-```
-
 ## Visualization tools
 
 You can find a summary plot in your specified directory after running `demultiplexTags`. If you set `plot.diagnostics = TRUE`, the pdf file will also contain key diagnostic plots for each tag. Check out our paper if you would like to use these plots to investigate the distribution of individual tag counts. We provide some additional visualization functions for data diagnostics:
