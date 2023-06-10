@@ -80,7 +80,7 @@ tag_mtx <- alignTags(read_table, tag.ref)
 
 The produced tag matrix can then be used as input for the `demultiplexTags` function. 
 
-See below for a complete code example with example fastq files (Download from https://github.com/Gartner-Lab/deMULTIplex2_test_data/) from McGinnis et al:
+See below for a complete code example with fastq files from McGinnis et al(Download from https://github.com/Gartner-Lab/deMULTIplex2_test_data/):
 
 ```
 fastq_dir <- "McGinnis_BAR_fastq/"
