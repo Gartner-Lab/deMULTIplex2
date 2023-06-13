@@ -122,7 +122,7 @@ tagCallHeatmap(tag_mtx = stoeckius_pbmc,
 
 * Installation failed on macOS - You may need to install Xquartz (https://www.xquartz.org/) first.
 
-* `demultiplexTags` function works best when most empty droplets/beads are removed. Consider using the transcriptome umi count, detected gene, or total tag umi count (not recommended) to determine which barcodes are cells. For maximal cell recovery, you can lower the cutoff to include some low quality cells and beads, and run deMULTIplex2 on the data to determine which are the labeled cells. In practice, we found as long as barcodes representing empty droplets/beads do not exceed 50% of the input data, deMULTIplex2 can properly fit the model and classify cells.
+* `demultiplexTags` function works best when majority of empty droplets/beads are removed. Consider using the transcriptome umi count, detected gene, or total tag umi count (not recommended) to determine which barcodes are cells. For maximal cell recovery, you can slightly lower the cutoff to include some low quality cells and beads, and run deMULTIplex2 on the data to determine which are the labeled cells. In practice, we found as long as barcodes representing empty droplets/beads do not exceed 10% of the input data, deMULTIplex2 can properly fit the model and classify cells.
 
 ## Cite deMULTIplex2
 
