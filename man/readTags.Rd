@@ -7,7 +7,7 @@
 readTags(
   dir,
   name,
-  barcode.type = c("MULTIseq", "MULTI-ATAC"),
+  barcode.type = c("MULTIseq", "MULTI-ATAC", "custom"),
   assay = c("RNA", "ATAC", "Multiome"),
   filter.cells = NULL,
   fastq.A = NA,
@@ -22,9 +22,9 @@ readTags(
 
 \item{name}{Prefix of FASTQ files for the tag library to be processed}
 
-\item{barcode.type}{Type of barcoding used: "MULTIseq" or "MULTI-ATAC"}
+\item{barcode.type}{Type of barcoding used: "MULTIseq", "MULTI-ATAC" or "custom", if using "custom", please specify fastq.A, fastq.B, pos.cbc, pos.sbc, pos.umi}
 
-\item{assay}{10X Genomics single-cell assay used: "RNA", "ATAC", or "Multiome"}
+\item{assay}{10X Genomics single-cell assay used: "RNA", "ATAC", "Multiome"}
 
 \item{filter.cells}{Optional: a character vector of cell barcodes to filter the read table by (default: NULL)}
 
