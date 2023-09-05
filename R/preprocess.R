@@ -10,8 +10,8 @@
 #'
 #' @param dir Path to directory containing tag FASTQ files
 #' @param name Prefix of FASTQ files for the tag library to be processed
-#' @param barcode.type Type of barcoding used: "MULTIseq" or "MULTI-ATAC"
-#' @param assay 10X Genomics single-cell assay used: "RNA", "ATAC", or "Multiome"
+#' @param barcode.type Type of barcoding used: "MULTIseq", "MULTI-ATAC" or "custom", if using "custom", please specify fastq.A, fastq.B, pos.cbc, pos.sbc, pos.umi
+#' @param assay 10X Genomics single-cell assay used: "RNA", "ATAC", "Multiome"
 #' @param filter.cells Optional: a character vector of cell barcodes to filter the read table by (default: NULL)
 #' @param fastq.A Optional: provide path to FASTQ containing cell barcodes
 #' @param fastq.B Optional: provide path to FASTQ containing sample tags
@@ -37,15 +37,15 @@
 #' @export
 readTags <- function(dir,
                      name,
-                     barcode.type = c("MULTIseq", "MULTI-ATAC"),
+                     barcode.type = c("MULTIseq", "MULTI-ATAC", "custom"),
                      assay = c("RNA", "ATAC", "Multiome"),
                      filter.cells = NULL,
                      fastq.A = NA, fastq.B = NA,
                      pos.cbc, pos.sbc, pos.umi) {
 
     t0 <- Sys.time()
-    barcode.type <- match.arg(barcode.type)
-    assay <- match.arg(assay)
+    #barcode.type <- match.arg(barcode.type)
+    #assay <- match.arg(assay)
 
     if (barcode.type == "MULTIseq" & assay == "RNA") {
         pattern.A <- "R1" # minimum 28bp read that contains cell BC and UMI
@@ -57,7 +57,8 @@ readTags <- function(dir,
         pattern.A <- "R2" # minimum 16bp "index" read that contains cell BC
         pattern.B <- "R3" # typically > 50bp read that contains sample BC and UMI
     } else {
-        return(message("Error - barcode should be either MULTIseq or MULTI-ATAC"))
+        cat("Using custom settings.")
+        #return(message("Error - barcode should be either MULTIseq or MULTI-ATAC"))
     }
 
     # set assay = NULL in order to use custom position indices (must manually define all 3)
@@ -101,15 +102,15 @@ readTags <- function(dir,
     r <- readFastq(path.A)
     gc(verbose = F)
 
-    if (barcode.type == "MULTIseq") {
+    if (barcode.type == "MULTI-ATAC") {
+        cat("Extracting Cell Barcodes...", fill = T)
+        read_table <- data.frame(Cell = subseq(sread(r), pos.cbc[1], pos.cbc[2]))
+    } else {
         cat("Extracting Cell Barcodes & UMIs...", fill = T)
         read_table <- data.frame(Cell = subseq(sread(r), pos.cbc[1], pos.cbc[2]),
                                  UMI = subseq(sread(r), pos.umi[1], pos.umi[2]))
     }
-    if (barcode.type == "MULTI-ATAC") {
-        cat("Extracting Cell Barcodes...", fill = T)
-        read_table <- data.frame(Cell = subseq(sread(r), pos.cbc[1], pos.cbc[2]))
-    }
+
     cat("Finished processing first set of reads; unloading from memory", fill = T)
     r <- NULL
     gc(verbose = F)
@@ -118,15 +119,15 @@ readTags <- function(dir,
     r <- readFastq(path.B)
     gc(verbose = F)
 
-    if (barcode.type == "MULTIseq") {
-        cat("Extracting Sample Barcodes...", fill = T)
-        read_table$Sample <- as.character(subseq(sread(r), pos.sbc[1], pos.sbc[2]))
-    }
     if (barcode.type == "MULTI-ATAC") {
         cat("Extracting Sample Barcodes & UMIs...", fill = T)
         read_table$UMI <- as.character(subseq(sread(r), pos.umi[1], pos.umi[2]))
         read_table$Sample <- as.character(subseq(sread(r), pos.sbc[1], pos.sbc[2]))
+    } else {
+        cat("Extracting Sample Barcodes...", fill = T)
+        read_table$Sample <- as.character(subseq(sread(r), pos.sbc[1], pos.sbc[2]))
     }
+
     cat("Finished processing second set of reads; unloading from memory", fill = T)
     r <- NULL
     gc(verbose = F)
