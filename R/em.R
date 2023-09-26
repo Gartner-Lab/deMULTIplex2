@@ -128,8 +128,6 @@ e.step <- function(df, fit0, fit1, pi.vector, plot = FALSE) {
 
     pi0 = pi.vector[1]
     pi1 = pi.vector[2]
-    prob0 = prob0
-    prob1 = prob1
 
     comp0 <- pi0 * prob0
     comp1 <- pi1 * prob1
