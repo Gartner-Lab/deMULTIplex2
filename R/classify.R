@@ -126,6 +126,8 @@ demultiplexTags <- function(tag_mtx,
         res_mtx[is.na(res_mtx)] = 0 # Set to 0 for now
         max.rqr = max(res_mtx[is.finite(res_mtx)]) + 1 # Best to cut inf?
         res_mtx[res_mtx > max.rqr] = max.rqr
+        min.rqr = min(res_mtx[is.finite(res_mtx)]) - 1
+        res_mtx[res_mtx < min.rqr] = min.rqr
     }
 
     res_mtx <- Matrix(as.matrix(res_mtx), sparse = T)
