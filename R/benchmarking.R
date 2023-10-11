@@ -61,6 +61,7 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
                                    init.cos.cut = .5,
                                    converge.threshold = 1e-3,
                                    prob.cut = 0.5,
+                                   min.cell.fit=10,
                                    max.cell.fit = 1000,
                                    max.iter = 30,
                                    min.quantile.fit = 0.05, # Remove cells with total umi less than the specified quantile, which could be beads
@@ -72,23 +73,23 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
     require(deMULTIplex2)
     start_time <- Sys.time()
     res <- demultiplexTags(tag_mtx,
-                          init.cos.cut = init.cos.cut,
-                          converge.threshold = converge.threshold,
-                          max.iter = max.iter,
-                          prob.cut = prob.cut,
-                          min.cell.fit = 10,
-                          max.cell.fit = max.cell.fit,
-                          min.quantile.fit = min.quantile.fit, # Remove cells with total umi less than the specified quantile, which could be beads
-                          max.quantile.fit = max.quantile.fit, # Remove cells with total umi greater than the specified quantile, which could be multiplets
-                          residual.type = residual.type, # ONLY use RQR for future
-                          plot.umap = plot.umap,
-                          plot.diagnostics = plot.diagnostics,
-                          plot.path = plot.path,
-                          plot.name = plot.name,
-                          umap.nn = 30L,
-                          seed = 1,
-                          point.size = 1,
-                          label.size = 3)
+                           init.cos.cut = init.cos.cut,
+                           converge.threshold = converge.threshold,
+                           max.iter = max.iter,
+                           prob.cut = prob.cut,
+                           min.cell.fit = min.cell.fit,
+                           max.cell.fit = max.cell.fit,
+                           min.quantile.fit = min.quantile.fit, # Remove cells with total umi less than the specified quantile, which could be beads
+                           max.quantile.fit = max.quantile.fit, # Remove cells with total umi greater than the specified quantile, which could be multiplets
+                           residual.type = residual.type, # ONLY use RQR for future
+                           plot.umap = plot.umap,
+                           plot.diagnostics = plot.diagnostics,
+                           plot.path = plot.path,
+                           plot.name = plot.name,
+                           umap.nn = 30L,
+                           seed = 1,
+                           point.size = 1,
+                           label.size = 3)
     end_time <- Sys.time()
     calls <- res$assign_table$barcode_assign
     calls[res$assign_table$barcode_count == 0] = "Negative"
@@ -106,7 +107,8 @@ benchmark_demultiplex2 <- function(tag_mtx, true_label,
         c(
             list(res = res),
             conf_stats,
-            time = use_time)
+            time = use_time
+        )
     )
 }
 
