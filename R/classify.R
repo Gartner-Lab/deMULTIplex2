@@ -79,10 +79,6 @@ demultiplexTags <- function(tag_mtx,
 
     colnames(tag_mtx) <- as.character(colnames(tag_mtx)) # Make sure the column names are unnamed.
 
-    if(any(init.cos.cut < 0.5)) {
-        cat("Warning: setting init.cos.cut less than 0.5 is not recommended.", fill=T)
-    }
-
     zero_bc_cells = rowSums(tag_mtx) == 0
     if (sum(zero_bc_cells) > 0) {
         message(paste0("Detected ", sum(zero_bc_cells), " cells with 0 barcode count. These cells will not be classified."))
@@ -130,6 +126,8 @@ demultiplexTags <- function(tag_mtx,
         res_mtx[is.na(res_mtx)] = 0 # Set to 0 for now
         max.rqr = max(res_mtx[is.finite(res_mtx)]) + 1 # Best to cut inf?
         res_mtx[res_mtx > max.rqr] = max.rqr
+        min.rqr = min(res_mtx[is.finite(res_mtx)]) - 1
+        res_mtx[res_mtx < min.rqr] = min.rqr
     }
 
     res_mtx <- Matrix(as.matrix(res_mtx), sparse = T)
