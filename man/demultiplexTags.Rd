@@ -7,7 +7,7 @@
 demultiplexTags(
   tag_mtx,
   init.cos.cut = 0.5,
-  max.iter = 30,
+  max.iter = 10,
   converge.threshold = 0.001,
   prob.cut = 0.5,
   min.cell.fit = 10,
