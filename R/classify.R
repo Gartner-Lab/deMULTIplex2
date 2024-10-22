@@ -54,7 +54,7 @@
 #' @export
 demultiplexTags <- function(tag_mtx,
                             init.cos.cut = 0.5,
-                            max.iter = 30,
+                            max.iter = 10,
                             converge.threshold = 1e-3,
                             prob.cut = 0.5,
                             min.cell.fit = 10,

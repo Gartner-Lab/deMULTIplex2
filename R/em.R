@@ -27,8 +27,8 @@ fit.em <- function(df, init.cos.cut = .9, converge.threshold = 1e-3, max.iter = 
 
         while (abs(Q[k]-Q[k-1])>=converge.threshold & !m.res$fail.fit.I & k <= max.iter) {
             # M step
-            m.res <- m.step(df, posterior.prob = e.res$posterior.prob, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit, min.quantile.fit = min.quantile.fit, max.quantile.fit = max.quantile.fit)
-            if(m.res$fail.fit.I) break
+            new_m.res <- m.step(df, posterior.prob = e.res$posterior.prob, min.cell.fit = min.cell.fit, max.cell.fit = max.cell.fit, min.quantile.fit = min.quantile.fit, max.quantile.fit = max.quantile.fit)
+            if(new_m.res$fail.fit.I) break else m.res = new_m.res # Only store if success
 
             # E step
             e.res <- e.step(df, m.res$fit0, m.res$fit1, m.res$pi.vector, plot = plot)
@@ -206,7 +206,7 @@ m.step <- function(df, posterior.prob, mem.init = NULL, min.cell.fit = 10, max.c
             fit0 = glm.nb("bc.umi~log(tt.umi)", df_fit0, link = log)
             fit1 = glm.nb("(tt.umi - bc.umi)~log(tt.umi)", df_fit1, link = log)
         }, error = function(e) {
-            cat("Fitting failed.", fill=T)
+            cat("Fitting failed for this iteration, using results from last iteration.", fill=T)
             fail.fit.I <<- 1
         })
     }
