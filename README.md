@@ -5,6 +5,9 @@ by Qin Zhu, Daniel N. Conrad and Zev J. Gartner
 
 <img src="inst/img/Figure_1A.png" width="80%" alt="Fig1A"> <br>
 
+## Update log
+2024/11/6: Version 1.0.2 - On occasions where GLM-NB failed to fit for one EM iteration, the last successful fit will be used instead of returning NULL.
+
 ## Compatibility
 
 **deMULTIplex2** is broadly applicable to datasets generated from technologies that label cells or nuclei with a sample-specific tag (e.g., DNA oligonucleotides) for pooled processing, including but not limited to:
