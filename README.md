@@ -127,6 +127,8 @@ tagCallHeatmap(tag_mtx = stoeckius_pbmc,
 
 * `demultiplexTags` function works best when majority of empty droplets/beads are removed. Consider using the transcriptome umi count, detected gene, or total tag umi count (not recommended) to determine which barcodes are cells. For maximal cell recovery, you can slightly lower the cutoff to include some low quality cells and beads, and run deMULTIplex2 on the data to determine which are the labeled cells. In practice, we found as long as barcodes representing empty droplets/beads do not exceed 10% of the input data, deMULTIplex2 can properly fit the model and classify cells.
 
+* Fitting failed for individual tags: GLM-NB fitting sometimes may fail, in such cases, try a different `init.cos.cut` instead of default 0.5, for example: `demultiplexTags(tag_mtx, init.cos.cut = 0.1)`. 
+
 ## Cite deMULTIplex2
 
 Zhu Q, Conrad DN, & Gartner ZJ. (2023). deMULTIplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275. https://doi.org/10.1101/2023.04.11.536275 
