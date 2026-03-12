@@ -131,8 +131,8 @@ tagCallHeatmap(tag_mtx = stoeckius_pbmc,
 
 ## Cite deMULTIplex2
 
-preprint: Zhu Q, Conrad DN, & Gartner ZJ. (2023). deMULTIplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275. https://doi.org/10.1101/2023.04.11.536275 
-publication: Zhu Q, Conrad DN, & Gartner ZJ. (2024). deMULTIplex2: robust sample demultiplexing for scRNA-seq. Genome Biology 25, 37. https://doi.org/10.1186/s13059-024-03177-y
+preprint: <br> Zhu Q, Conrad DN, & Gartner ZJ. (2023). deMULTIplex2: robust sample demultiplexing for scRNA-seq. bioRxiv, 2023.04.11.536275. https://doi.org/10.1101/2023.04.11.536275 <br><br>
+publication: <br> Zhu Q, Conrad DN, & Gartner ZJ. (2024). deMULTIplex2: robust sample demultiplexing for scRNA-seq. Genome Biology 25, 37. https://doi.org/10.1186/s13059-024-03177-y
 
 
 ## License
